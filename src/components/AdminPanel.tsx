@@ -1004,7 +1004,7 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
             </h3>
             <p className="text-slate-300 text-xs md:text-sm mt-2 leading-relaxed">
               Gere o link oficial de votação para compartilhar com os eleitores no WhatsApp e redes sociais. 
-              <strong> Quando as pessoas acessarem, precisarão se identificar com o Google logo de cara</strong> para garantir a validade e a segurança de cada voto (máximo de 1 voto por pessoa).
+              Os votos são contabilizados de forma segura (máximo de 1 voto por pessoa).
             </p>
           </div>
 

@@ -217,13 +217,19 @@ export default function PlayerCard({
                 disabled={hasVotedToday || isVoting}
                 className={`w-full py-3.5 rounded-2xl font-black text-sm tracking-wide transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex items-center justify-center gap-2 ${
                   hasVotedToday
-                    ? 'bg-slate-50 text-slate-400 border border-slate-150 cursor-not-allowed'
+                    ? votedPlayerId === player.id 
+                      ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20' 
+                      : 'bg-slate-50 text-slate-400 border border-slate-150 cursor-not-allowed'
                     : 'bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 text-white shadow-md shadow-blue-500/15 hover:shadow-lg hover:shadow-blue-500/25'
                 }`}
               >
                 {isClicking ? (
                   <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Computando...</>
-                ) : hasVotedToday ? 'Votação Bloqueada' : 'Votar neste Craque'}
+                ) : hasVotedToday ? (
+                  votedPlayerId === player.id ? <><Check className="w-4 h-4" /> Seu Voto de Hoje</> : 'Bloqueado (1 voto/dia)'
+                ) : (
+                  'Votar neste Craque'
+                )}
               </button>
             )}
 
@@ -236,7 +242,7 @@ export default function PlayerCard({
               }`}
             >
               <Share2 className="w-4 h-4" />
-              <span>{copied ? 'Link Copiado!' : 'Indicar Jogador'}</span>
+              <span>{copied ? 'Link Copiado!' : 'Fazer Campanha / Indicar'}</span>
             </button>
           </div>
         </div>
