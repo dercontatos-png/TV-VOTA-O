@@ -50,36 +50,33 @@ export async function getPlayers(): Promise<Player[]> {
   try {
     let playersList: Player[] = [];
 
-    if (isClientOnly()) {
-      // 1. Fetch directly from Supabase for Netlify static hosting
-      const supabasePlayers = await getPlayersFromSupabase();
-      if (supabasePlayers.length === 0) {
-        // Seed predefined players to Supabase if it's completely empty
-        for (const p of DEFAULT_PLAYERS) {
-          await upsertPlayerInSupabase(p);
-        }
-        playersList = [...DEFAULT_PLAYERS];
-      } else {
-        playersList = supabasePlayers.map((p: any) => ({
+    // 1. Fetch directly from Supabase for Netlify static hosting
+    const supabasePlayers = await getPlayersFromSupabase();
+    if (supabasePlayers.length === 0) {
+      // Seed predefined players to Supabase if it's completely empty
+      for (const p of DEFAULT_PLAYERS) {
+        await upsertPlayerInSupabase({
           id: p.id,
-          name: p.nome || '',
-          team: p.time || '',
-          position: '',
-          imageUrl: p.logo_url || '',
-          imageFit: 'cover',
-          imagePosition: 'top',
-          order: 0,
-          createdAt: p.criado_em ? new Date(p.criado_em).getTime() : Date.now(),
-          votesCount: 0
-        })) as Player[];
+          name: p.name,
+          team: p.team,
+          imageUrl: p.imageUrl || '',
+          createdAt: Date.now()
+        });
       }
+      playersList = [...DEFAULT_PLAYERS];
     } else {
-      // Fetch from Express backend API in AI Studio container environment
-      const response = await fetch('/api/players');
-      if (!response.ok) {
-        throw new Error('Failed to fetch players from API');
-      }
-      playersList = await response.json();
+      playersList = supabasePlayers.map((p: any) => ({
+        id: p.id,
+        name: p.nome || '',
+        team: p.time || '',
+        position: '',
+        imageUrl: p.logo_url || '',
+        imageFit: 'cover',
+        imagePosition: 'top',
+        order: 0,
+        createdAt: p.criado_em ? new Date(p.criado_em).getTime() : Date.now(),
+        votesCount: 0
+      })) as Player[];
     }
 
     // 2. Dynamically retrieve real-time votes from Supabase
@@ -122,7 +119,6 @@ export async function getPlayers(): Promise<Player[]> {
   }
 }
 
-
 export async function addPlayer(
   name: string, 
   team: string, 
@@ -146,66 +142,29 @@ export async function addPlayer(
     createdAt: Date.now()
   };
 
-  if (isClientOnly()) {
-    await upsertPlayerInSupabase(player);
-    return id;
-  } else {
-    const response = await fetch('/api/players', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(player)
-    });
-    if (!response.ok) {
-      throw new Error('Failed to add player');
-    }
-    const result = await response.json();
-    return result.id;
-  }
+  await upsertPlayerInSupabase(player);
+  return id;
 }
 
-
 export async function updatePlayer(id: string, updates: Partial<Player>): Promise<void> {
-  if (isClientOnly()) {
-    const supabasePlayers = await getPlayersFromSupabase();
-    const existing = supabasePlayers.find((p: any) => p.id === id);
-    if (existing) {
-      const merged = { 
-        id: existing.id,
-        name: existing.nome || '',
-        team: existing.time || '',
-        imageUrl: existing.logo_url || '',
-        createdAt: existing.criado_em ? new Date(existing.criado_em).getTime() : Date.now(),
-        ...updates 
-      };
-      await upsertPlayerInSupabase(merged);
-    }
-  } else {
-    const response = await fetch(`/api/players/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(updates)
-    });
-    if (!response.ok) {
-      throw new Error('Failed to update player');
-    }
+  // First get the player
+  const supabasePlayers = await getPlayersFromSupabase();
+  const existing = supabasePlayers.find((p: any) => p.id === id);
+  if (existing) {
+    const merged = { 
+      id: existing.id,
+      name: existing.nome || '',
+      team: existing.time || '',
+      imageUrl: existing.logo_url || '',
+      createdAt: existing.criado_em ? new Date(existing.criado_em).getTime() : Date.now(),
+      ...updates 
+    };
+    await upsertPlayerInSupabase(merged);
   }
 }
 
 export async function deletePlayer(id: string): Promise<void> {
-  if (isClientOnly()) {
-    await deletePlayerInSupabase(id);
-  } else {
-    const response = await fetch(`/api/players/${id}`, {
-      method: 'DELETE'
-    });
-    if (!response.ok) {
-      throw new Error('Failed to delete player');
-    }
-  }
+  await deletePlayerInSupabase(id);
 }
 
 export async function hasVotedToday(voterId: string): Promise<{ voted: boolean; playerVotedId?: string }> {
@@ -273,20 +232,12 @@ export async function getSystemConfig(): Promise<SystemConfig> {
   try {
     let config: SystemConfig;
 
-    if (isClientOnly()) {
-      const supabaseConfig = await getSettingsFromSupabase();
-      if (supabaseConfig) {
-        config = supabaseConfig;
-      } else {
-        await upsertSettingsInSupabase(DEFAULT_CONFIG);
-        config = DEFAULT_CONFIG;
-      }
+    const supabaseConfig = await getSettingsFromSupabase();
+    if (supabaseConfig) {
+      config = supabaseConfig;
     } else {
-      const response = await fetch('/api/settings');
-      if (!response.ok) {
-        throw new Error('Failed to fetch settings from API');
-      }
-      config = await response.json() as SystemConfig;
+      await upsertSettingsInSupabase(DEFAULT_CONFIG);
+      config = DEFAULT_CONFIG;
     }
     
     if (config && typeof config.lastResetAt === 'number') {
@@ -302,23 +253,9 @@ export async function getSystemConfig(): Promise<SystemConfig> {
   }
 }
 
-
 export async function updateSystemConfig(config: SystemConfig): Promise<void> {
   try {
-    if (isClientOnly()) {
-      await upsertSettingsInSupabase(config);
-    } else {
-      const response = await fetch('/api/settings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(config)
-      });
-      if (!response.ok) {
-        throw new Error('Failed to update config on server');
-      }
-    }
+    await upsertSettingsInSupabase(config);
     
     if (config && typeof config.lastResetAt === 'number') {
       lastResetAtCache = config.lastResetAt;
@@ -332,58 +269,32 @@ export async function updateSystemConfig(config: SystemConfig): Promise<void> {
   }
 }
 
-
 export async function resetAllVotes(): Promise<void> {
   cachedSupabaseVotes = null; // Instantly invalidate votes cache
 
-  if (isClientOnly()) {
-    // 1. Try to clear votes from Supabase using direct client
-    try {
-      const { error } = await import('./supabase').then(m => 
-        m.supabase.from('votos').delete().neq('id', 0) // Delete all rows
-      );
-      if (error) {
-        console.warn("Supabase votes deletion failed:", error);
-      }
-    } catch (err) {
-      console.error("Exception clearing Supabase votes:", err);
+  // 1. Try to clear votes from Supabase using direct client
+  try {
+    const { error } = await import('./supabase').then(m => 
+      m.supabase.from('votos').delete().neq('id', 0) // Delete all rows
+    );
+    if (error) {
+      console.warn("Supabase votes deletion failed:", error);
     }
+  } catch (err) {
+    console.error("Exception clearing Supabase votes:", err);
+  }
 
-    // 2. Set lastResetAt in settings via Supabase
-    try {
-      const resetTime = Date.now();
-      const currentConfig = await getSettingsFromSupabase() || DEFAULT_CONFIG;
-      await upsertSettingsInSupabase({
-        ...currentConfig,
-        lastResetAt: resetTime
-      });
-      lastResetAtCache = resetTime;
-    } catch (err) {
-      console.error("Failed to set lastResetAt in Supabase:", err);
-    }
-  } else {
-    // Reset via API
-    const response = await fetch('/api/votes/reset', {
-      method: 'POST'
+  // 2. Set lastResetAt in settings via Supabase
+  try {
+    const resetTime = Date.now();
+    const currentConfig = await getSettingsFromSupabase() || DEFAULT_CONFIG;
+    await upsertSettingsInSupabase({
+      ...currentConfig,
+      lastResetAt: resetTime
     });
-    if (!response.ok) {
-      throw new Error('Failed to reset votes on server');
-    }
-
-    // Try to clear votes from Supabase using REST API
-    try {
-      const { error } = await import('./supabase').then(m => 
-        m.supabase.from('votos').delete().neq('id', 0) // Delete all rows
-      );
-      if (error) {
-        console.warn("Supabase votes deletion failed:", error);
-      }
-    } catch (err) {
-      console.error("Exception clearing Supabase votes:", err);
-    }
-
-    // Update local cache of lastResetAt to current timestamp so we immediately start filtering
-    lastResetAtCache = Date.now();
+    lastResetAtCache = resetTime;
+  } catch (err) {
+    console.error("Failed to set lastResetAt in Supabase:", err);
   }
 
   if (typeof window !== 'undefined') {
@@ -393,27 +304,11 @@ export async function resetAllVotes(): Promise<void> {
 
 export async function deleteVote(voteId: string, playerId?: string): Promise<void> {
   cachedSupabaseVotes = null; // Clear cached votes to update counts instantly
-
-  // 1. Delete from Supabase
   try {
     const { deleteVoteInSupabase } = await import('./supabase');
     await deleteVoteInSupabase(voteId);
   } catch (err: any) {
     console.error("Could not delete vote from Supabase:", err);
-    throw new Error(`Erro ao deletar voto no Supabase: ${err.message || err}. Certifique-se de que executou as permissões (políticas de exclusão RLS) no editor SQL do Supabase.`);
-  }
-
-  // 2. Delete from server's fallback DB / Firestore to maintain absolute sync
-  if (!isClientOnly()) {
-    try {
-      const res = await fetch(`/api/votes/${voteId}`, {
-        method: 'DELETE'
-      });
-      if (!res.ok) {
-        console.warn("Backend sync deletion responded with an error");
-      }
-    } catch (err) {
-      console.warn("Could not sync vote deletion with Express backend:", err);
-    }
+    throw new Error(`Erro ao deletar voto no Supabase: ${err.message || err}`);
   }
 }
