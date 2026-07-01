@@ -2,15 +2,15 @@
 -- SCRIPT COMPLETO DE CONFIGURAÇÃO DE TABELAS E SEGURANÇA NO SUPABASE
 -- =========================================================================
 -- Execute este script completo no SQL Editor do seu painel do Supabase.
--- Ele cria e configura as tabelas 'votos', 'jogadores' e 'configuracoes'
+-- Ele cria e configura as tabelas 'votos', 'cara' e 'configuracoes'
 -- com as políticas de acesso público (RLS) corretas para que o seu site
 -- estático (Netlify) consiga salvar e ler dados diretamente.
 -- =========================================================================
 
 -- -------------------------------------------------------------------------
--- 1. CONFIGURAÇÃO DA TABELA DE JOGADORES (jogadores)
+-- 1. CONFIGURAÇÃO DA TABELA DE JOGADORES (cara)
 -- -------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS public.jogadores (
+CREATE TABLE IF NOT EXISTS public.cara (
   id text PRIMARY KEY,
   nome text NOT NULL,
   time text NOT NULL,
@@ -18,18 +18,18 @@ CREATE TABLE IF NOT EXISTS public.jogadores (
   criado_em timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Habilitar RLS ou Desabilitar para evitar erros (Se quiser total facilidade, desative com: ALTER TABLE public.jogadores DISABLE ROW LEVEL SECURITY;)
-ALTER TABLE public.jogadores ENABLE ROW LEVEL SECURITY;
+-- Habilitar RLS ou Desabilitar para evitar erros (Se quiser total facilidade, desative com: ALTER TABLE public.cara DISABLE ROW LEVEL SECURITY;)
+ALTER TABLE public.cara ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Permitir leitura pública de jogadores" ON public.jogadores;
-DROP POLICY IF EXISTS "Permitir inserções públicas de jogadores" ON public.jogadores;
-DROP POLICY IF EXISTS "Permitir atualização pública de jogadores" ON public.jogadores;
-DROP POLICY IF EXISTS "Permitir exclusão pública de jogadores" ON public.jogadores;
+DROP POLICY IF EXISTS "Permitir leitura pública de jogadores" ON public.cara;
+DROP POLICY IF EXISTS "Permitir inserções públicas de jogadores" ON public.cara;
+DROP POLICY IF EXISTS "Permitir atualização pública de jogadores" ON public.cara;
+DROP POLICY IF EXISTS "Permitir exclusão pública de jogadores" ON public.cara;
 
-CREATE POLICY "Permitir leitura pública de jogadores" ON public.jogadores FOR SELECT TO anon USING (true);
-CREATE POLICY "Permitir inserções públicas de jogadores" ON public.jogadores FOR INSERT TO anon WITH CHECK (true);
-CREATE POLICY "Permitir atualização pública de jogadores" ON public.jogadores FOR UPDATE TO anon USING (true) WITH CHECK (true);
-CREATE POLICY "Permitir exclusão pública de jogadores" ON public.jogadores FOR DELETE TO anon USING (true);
+CREATE POLICY "Permitir leitura pública de jogadores" ON public.cara FOR SELECT TO anon USING (true);
+CREATE POLICY "Permitir inserções públicas de jogadores" ON public.cara FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "Permitir atualização pública de jogadores" ON public.cara FOR UPDATE TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "Permitir exclusão pública de jogadores" ON public.cara FOR DELETE TO anon USING (true);
 
 -- -------------------------------------------------------------------------
 -- 2. CONFIGURAÇÃO DA TABELA DE CONFIGURAÇÕES DO SISTEMA (configuracoes)
@@ -87,6 +87,6 @@ CREATE INDEX IF NOT EXISTS votos_voter_id_date_str_idx ON public.votos (voter_id
 -- OPÇÃO ULTRA-SIMPLES E À PROVA DE ERROS:
 -- Se você continuar tendo erros de RLS ou políticas, execute a linha abaixo:
 -- -------------------------------------------------------------------------
--- ALTER TABLE public.jogadores DISABLE ROW LEVEL SECURITY;
+-- ALTER TABLE public.cara DISABLE ROW LEVEL SECURITY;
 -- ALTER TABLE public.configuracoes DISABLE ROW LEVEL SECURITY;
 -- ALTER TABLE public.votos DISABLE ROW LEVEL SECURITY;

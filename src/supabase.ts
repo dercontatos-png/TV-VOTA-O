@@ -153,9 +153,9 @@ export async function deleteVoteInSupabase(voteId: string): Promise<void> {
 export async function getPlayersFromSupabase() {
   try {
     const { data, error } = await supabase
-      .from('jogadores')
+      .from('cara')
       .select('*')
-      .neq('id', 'system_config');
+      .neq('id', 'configuracao_do_sistema');
     
     if (error) {
       console.error("Error fetching players from Supabase:", error);
@@ -180,7 +180,7 @@ export async function upsertPlayerInSupabase(player: any) {
     });
 
     const { error } = await supabase
-      .from('jogadores')
+      .from('cara')
       .upsert([
         {
           id: player.id,
@@ -203,7 +203,7 @@ export async function upsertPlayerInSupabase(player: any) {
 export async function deletePlayerInSupabase(id: string) {
   try {
     const { error } = await supabase
-      .from('jogadores')
+      .from('cara')
       .delete()
       .eq('id', id);
     if (error) {
@@ -222,7 +222,7 @@ export async function getSettingsFromSupabase() {
     const { data, error } = await supabase
       .from('configuracoes')
       .select('*')
-      .eq('id', 'system_config')
+      .eq('id', 'configuracao_do_sistema')
       .single();
     
     if (!error && data) {
@@ -237,12 +237,12 @@ export async function getSettingsFromSupabase() {
     // Silently proceed to fallback
   }
 
-  // 2. Fallback to 'jogadores' table with id 'system_config'
+  // 2. Fallback to 'cara' table with id 'configuracao_do_sistema'
   try {
     const { data, error } = await supabase
-      .from('jogadores')
+      .from('cara')
       .select('*')
-      .eq('id', 'system_config')
+      .eq('id', 'configuracao_do_sistema')
       .single();
     
     if (!error && data) {
@@ -271,7 +271,7 @@ export async function upsertSettingsInSupabase(settings: any) {
       .from('configuracoes')
       .upsert([
         {
-          id: 'system_config',
+          id: 'configuracao_do_sistema',
           dados: JSON.stringify(settings)
         }
       ]);
@@ -282,15 +282,15 @@ export async function upsertSettingsInSupabase(settings: any) {
     // Silently proceed
   }
 
-  // 2. Fallback / Sync with 'jogadores' table (stores in 'nome' column as serialized JSON)
+  // 2. Fallback / Sync with 'cara' table (stores in 'nome' column as serialized JSON)
   try {
     const { error } = await supabase
-      .from('jogadores')
+      .from('cara')
       .upsert([
         {
-          id: 'system_config',
+          id: 'configuracao_do_sistema',
           nome: JSON.stringify(settings),
-          time: 'SYSTEM',
+          time: 'SISTEMA',
           logo_url: '',
           criado_em: new Date().toISOString()
         }
