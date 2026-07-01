@@ -275,8 +275,7 @@ export default function App() {
 
         // Subscribe to players
         const playersRef = collection(db, 'players');
-        const q = query(playersRef, orderBy('votesCount', 'desc'), orderBy('name', 'asc'));
-        unsubscribePlayers = onSnapshot(q, (snapshot) => {
+        unsubscribePlayers = onSnapshot(playersRef, (snapshot) => {
           const playersData = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
@@ -285,6 +284,8 @@ export default function App() {
           const sortedPlayers = [...playersData].sort((a, b) => (a.order || 0) - (b.order || 0));
           setPlayers(sortedPlayers);
           setLoading(false);
+        }, (error) => {
+          console.error("Snapshot error:", error);
         });
 
       } catch (err) {
@@ -387,6 +388,10 @@ export default function App() {
       setIsVoting(false);
     }
   };
+
+  if (view === 'mural') {
+    return <MuralPanel />;
+  }
 
   if (checkingAdmin) {
     return (
@@ -595,10 +600,6 @@ export default function App() {
         </div>
       </div>
     );
-  }
-
-  if (view === 'mural') {
-    return <MuralPanel />;
   }
 
   return (

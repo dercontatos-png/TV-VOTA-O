@@ -97,10 +97,15 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
 
   const handlePlayerDrop = async (e: React.DragEvent, targetIndex: number) => {
     e.preventDefault();
-    if (draggedPlayerIndex === null || draggedPlayerIndex === targetIndex) return;
+    const sourceIndex = draggedPlayerIndex;
+    
+    if (sourceIndex === null || sourceIndex === undefined || sourceIndex === targetIndex) {
+      setDraggedPlayerIndex(null);
+      return;
+    }
 
     const newPlayers = [...sortedPlayers];
-    const [draggedPlayer] = newPlayers.splice(draggedPlayerIndex, 1);
+    const [draggedPlayer] = newPlayers.splice(sourceIndex, 1);
     newPlayers.splice(targetIndex, 0, draggedPlayer);
 
     setDraggedPlayerIndex(null);

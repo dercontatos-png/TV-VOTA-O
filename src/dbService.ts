@@ -304,22 +304,37 @@ export async function resetAllVotes(): Promise<void> {
     const playersCol = collection(db, 'players');
     const playersSnapshot = await getDocs(playersCol);
     
-    const batch = writeBatch(db);
+    let batch = writeBatch(db);
+    let operationCount = 0;
     
     // Reset players votesCount to 0
-    playersSnapshot.docs.forEach((playerDoc) => {
+    for (const playerDoc of playersSnapshot.docs) {
       batch.update(playerDoc.ref, { votesCount: 0 });
-    });
+      operationCount++;
+      if (operationCount >= 450) {
+        await batch.commit();
+        batch = writeBatch(db);
+        operationCount = 0;
+      }
+    }
     
     // Delete all votes (fetch all and delete)
     const votesCol = collection(db, 'votes');
     const votesSnapshot = await getDocs(votesCol);
     
-    votesSnapshot.docs.forEach((voteDoc) => {
+    for (const voteDoc of votesSnapshot.docs) {
       batch.delete(voteDoc.ref);
-    });
+      operationCount++;
+      if (operationCount >= 450) {
+        await batch.commit();
+        batch = writeBatch(db);
+        operationCount = 0;
+      }
+    }
     
-    await batch.commit();
+    if (operationCount > 0) {
+      await batch.commit();
+    }
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'batch_reset_all');
   }

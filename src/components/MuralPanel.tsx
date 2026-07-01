@@ -46,17 +46,21 @@ export function MuralPanel() {
     };
   }, []);
 
-  // Format data for Recharts
-  const chartData = players.map(player => {
-    const percentage = totalVotes > 0 ? ((player.votesCount / totalVotes) * 100).toFixed(1) : '0';
-    return {
-      name: player.name,
-      votes: player.votesCount,
-      percentage: percentage,
-      team: player.team,
-      imageUrl: player.imageUrl
-    };
-  });
+  // Format data for Recharts (Show top 10 players)
+  const chartData = [...players]
+    .sort((a, b) => b.votesCount - a.votesCount)
+    .slice(0, 10)
+    .map(player => {
+      const percentage = totalVotes > 0 ? ((player.votesCount / totalVotes) * 100).toFixed(1) : '0';
+      return {
+        name: player.name,
+        votes: player.votesCount,
+        percentage: percentage,
+        team: player.team,
+        imageUrl: player.imageUrl,
+        position: player.position
+      };
+    });
 
   // Custom tick to show player photo and name
   const CustomTick = (props: any) => {
@@ -65,22 +69,27 @@ export function MuralPanel() {
     
     return (
       <g transform={`translate(${x},${y})`}>
-        <foreignObject x={-75} y={15} width={150} height={200}>
+        <foreignObject x={-60} y={15} width={120} height={200}>
           <div className="flex flex-col items-center justify-start h-full">
             {player?.imageUrl ? (
-              <div className="w-28 h-28 rounded-full overflow-hidden mb-4 border-4 border-slate-700/50 shadow-[0_0_20px_rgba(0,0,0,0.6)] bg-slate-800">
+              <div className="w-16 h-16 rounded-full overflow-hidden mb-2 border-[2px] border-white shadow-lg bg-slate-100 shrink-0">
                  <img src={player.imageUrl} className="w-full h-full object-cover" alt={player.name} referrerPolicy="no-referrer" />
               </div>
             ) : (
-              <div className="w-28 h-28 rounded-full bg-slate-800 border-4 border-slate-700/50 mb-4 flex items-center justify-center text-slate-400 text-3xl font-black shadow-[0_0_20px_rgba(0,0,0,0.6)]">
+              <div className="w-16 h-16 rounded-full bg-slate-100 border-[2px] border-white mb-2 flex items-center justify-center text-[#003f7a] text-2xl font-black shadow-lg shrink-0">
                 {payload.value.substring(0, 2).toUpperCase()}
               </div>
             )}
-            <span className="text-xl font-black text-white text-center uppercase tracking-wider leading-tight w-full truncate px-1 drop-shadow-md">
+            <span className="text-sm font-black text-white text-center uppercase tracking-wider leading-tight w-full break-words px-1 drop-shadow-md">
               {payload.value}
             </span>
+            {player?.position && (
+              <span className="text-[10px] text-blue-200 font-bold uppercase tracking-widest w-full text-center mt-1 drop-shadow-md break-words">
+                {player.position}
+              </span>
+            )}
             {player?.team && (
-              <span className="text-sm text-emerald-400 font-black uppercase tracking-widest truncate w-full text-center mt-1.5 drop-shadow-md">
+              <span className="text-[10px] text-blue-300 font-bold uppercase tracking-widest truncate w-full text-center mt-0.5 drop-shadow-md">
                 {player.team}
               </span>
             )}
@@ -91,45 +100,54 @@ export function MuralPanel() {
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] flex flex-col font-sans text-slate-100 relative overflow-hidden">
+    <div className="min-h-screen bg-[#001730] flex flex-col font-sans text-slate-100 relative overflow-hidden">
       
-      {/* Background Effects */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-900/30 via-slate-900/0 to-transparent"></div>
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-indigo-900/20 via-slate-900/0 to-transparent"></div>
+      {/* Background Graphic Elements */}
+      <div className="absolute top-0 left-0 w-full h-full opacity-30 pointer-events-none">
+        <div className="absolute top-[0%] left-[0%] w-[50%] h-[50%] rounded-full bg-blue-500 blur-[150px]"></div>
+        <div className="absolute bottom-[0%] right-[0%] w-[50%] h-[50%] rounded-full bg-blue-800 blur-[150px]"></div>
+      </div>
+      <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-400 via-white to-blue-400"></div>
 
-      <div className="flex flex-col h-screen p-6 md:p-10 relative z-10">
+      <div className="flex flex-col h-screen p-6 md:p-8 relative z-10">
         
-        {/* Header - Simplified as requested */}
-        <header className="flex justify-end items-center mb-6">
-          <div className="flex flex-col items-end">
-            <span className="text-2xl text-emerald-400/80 uppercase tracking-widest font-black mb-1">Total de Votos</span>
-            <div className="text-7xl font-black text-white font-mono tracking-tighter drop-shadow-xl">
+        {/* Header */}
+        <header className="flex justify-between items-start mb-8">
+          <div className="bg-[#0f172a]/80 backdrop-blur-md border border-white/10 rounded-xl p-4 shadow-2xl max-w-2xl">
+            <h1 className="text-xl md:text-2xl font-black text-white uppercase tracking-widest leading-snug">
+              RESULTADO DOS VOTOS
+            </h1>
+          </div>
+
+          <div className="flex flex-col items-end bg-[#0f172a]/80 backdrop-blur-md border border-white/10 rounded-xl py-3 px-6 shadow-2xl shrink-0 ml-4">
+            <span className="text-sm text-blue-200 font-bold uppercase tracking-widest mb-1">Total de Votos</span>
+            <div className="text-4xl font-black text-white font-mono tracking-tighter">
               {totalVotes.toLocaleString('pt-BR')}
             </div>
           </div>
         </header>
 
         {/* Chart Panel */}
-        <div className="flex-grow bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] border border-white/10 p-8 md:p-12 shadow-2xl relative">
+        <div className="flex-grow bg-white/5 backdrop-blur-xl rounded-[2rem] border border-white/10 p-6 md:p-8 shadow-2xl relative mb-12 mr-[200px] flex flex-col">
           
           {totalVotes === 0 ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500">
-              <Users className="w-32 h-32 mb-6 opacity-20" />
-              <p className="text-4xl font-black uppercase tracking-widest opacity-50">Aguardando Votos</p>
+              <Users className="w-24 h-24 mb-6 opacity-20" />
+              <p className="text-3xl font-black uppercase tracking-widest opacity-50">Aguardando Votos</p>
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}
-                margin={{ top: 80, right: 30, left: 20, bottom: 180 }}
+                margin={{ top: 80, right: 20, left: 0, bottom: 180 }}
               >
                 <defs>
                   <linearGradient id="colorVotes" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#34d399" stopOpacity={1}/>
-                    <stop offset="100%" stopColor="#047857" stopOpacity={0.7}/>
+                    <stop offset="0%" stopColor="#ffffff" stopOpacity={1}/>
+                    <stop offset="100%" stopColor="#93c5fd" stopOpacity={0.9}/>
                   </linearGradient>
                   <filter id="glow">
-                    <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                    <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
                     <feMerge>
                       <feMergeNode in="coloredBlur"/>
                       <feMergeNode in="SourceGraphic"/>
@@ -137,11 +155,11 @@ export function MuralPanel() {
                   </filter>
                 </defs>
                 
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.08)" />
+                <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="rgba(255,255,255,0.15)" />
                 
                 <XAxis 
                   dataKey="name" 
-                  axisLine={{ stroke: 'rgba(255,255,255,0.15)', strokeWidth: 2 }}
+                  axisLine={{ stroke: 'rgba(255,255,255,0.4)', strokeWidth: 3 }}
                   tickLine={false}
                   tick={<CustomTick />}
                   interval={0}
@@ -150,22 +168,23 @@ export function MuralPanel() {
                 <YAxis 
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: '#94a3b8', fontSize: 24, fontWeight: 700 }}
-                  dx={-20}
+                  tick={{ fill: '#bfdbfe', fontSize: 24, fontWeight: 800 }}
+                  dx={-15}
                   allowDecimals={false}
+                  domain={[0, (dataMax: number) => (dataMax === 0 ? 10 : Math.ceil(dataMax * 1.2))]}
                 />
                 
                 <Tooltip
-                  cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-                  contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', borderColor: 'rgba(255,255,255,0.15)', borderRadius: '16px', color: '#fff', backdropFilter: 'blur(12px)' }}
-                  itemStyle={{ color: '#34d399', fontWeight: '900', fontSize: '24px' }}
+                  cursor={{ fill: 'rgba(255,255,255,0.1)' }}
+                  contentStyle={{ backgroundColor: 'rgba(0,40,85,0.95)', borderColor: 'rgba(255,255,255,0.3)', borderRadius: '12px', color: '#fff', backdropFilter: 'blur(12px)' }}
+                  itemStyle={{ color: '#60a5fa', fontWeight: '900', fontSize: '24px' }}
                 />
 
                 <Bar 
                   dataKey="votes" 
                   fill="url(#colorVotes)" 
-                  radius={[16, 16, 0, 0]}
-                  barSize={120}
+                  radius={[12, 12, 0, 0]}
+                  maxBarSize={90}
                   isAnimationActive={true}
                   animationDuration={1000}
                   label={(props: any) => {
@@ -175,11 +194,11 @@ export function MuralPanel() {
                     if (value === 0) return null;
                     
                     return (
-                      <g transform={`translate(${x + width / 2},${y - 25})`}>
-                        <text fill="#ffffff" textAnchor="middle" fontSize={36} fontWeight={900} filter="url(#glow)">
+                      <g transform={`translate(${x + width / 2},${y - 15})`}>
+                        <text fill="#ffffff" textAnchor="middle" fontSize={28} fontWeight={900} filter="url(#glow)" y={-25}>
                           {value}
                         </text>
-                        <text y={30} fill="#a7f3d0" textAnchor="middle" fontSize={22} fontWeight={800}>
+                        <text fill="#bfdbfe" textAnchor="middle" fontSize={16} fontWeight={800} y={-5}>
                           {percentage}%
                         </text>
                       </g>
@@ -195,6 +214,12 @@ export function MuralPanel() {
           )}
         </div>
       </div>
+
+      {/* Leave bottom right completely empty for TV Logo */}
+      <div className="absolute bottom-0 right-0 w-[300px] h-[250px] pointer-events-none z-50">
+        {/* Intentionally left blank for broadcast logo overlay */}
+      </div>
+
     </div>
   );
 }
