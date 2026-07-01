@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Plus, Edit2, Trash2, KeyRound, LogOut, RefreshCw, 
   Upload, Shield, FileImage, ClipboardList, Info, HelpCircle, Eye, Download,
-  Link, Copy, Check, Monitor, ExternalLink, ArrowUp, ArrowDown, Image as ImageIcon
+  Link, Copy, Check, Monitor, ExternalLink, ArrowUp, ArrowDown, Image as ImageIcon, ShieldAlert
 } from 'lucide-react';
 import { Player, SystemConfig, Vote } from '../types';
 import { addPlayer, updatePlayer, deletePlayer, resetAllVotes, getVotesHistory, getAllVotes, DEFAULT_CONFIG } from '../dbService';
@@ -109,7 +109,7 @@ const ExportNodeTV = ({ config, totalVotes, players }: any) => {
         </div>
 
         {/* Bottom Section: Bars */}
-        <div style={{ display: 'flex', gap: '28px', alignItems: 'flex-end', justifyContent: 'flex-start', paddingLeft: '0px', marginLeft: '-60px', height: '580px', paddingBottom: '0' }}>
+        <div style={{ display: 'flex', gap: '28px', alignItems: 'flex-end', justifyContent: 'flex-start', paddingLeft: '20px', height: '580px', paddingBottom: '0' }}>
           {[...players].sort((a: any, b: any) => b.votesCount - a.votesCount).slice(0, 10).map((player: any, index: number, arr: any[]) => {
             const topVotes = arr[0]?.votesCount || 1;
             const heightPercentage = Math.max(15, (player.votesCount / topVotes) * 100);
@@ -183,7 +183,7 @@ const ExportNodeFeed = ({ config, totalVotes, players }: any) => {
         backgroundImage: 'linear-gradient(to bottom right, #020617, #001e3b)',
         position: 'fixed', 
         top: '-10000px',
-        left: '-10000px',
+        left: '-15000px',
         pointerEvents: 'none',
         zIndex: -9999,
         padding: '0',
@@ -202,11 +202,11 @@ const ExportNodeFeed = ({ config, totalVotes, players }: any) => {
             {config?.logoCampinense && <img crossOrigin="anonymous" src={config.logoCampinense} style={{ height: '90px', objectFit: 'contain' }} />}
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
             <h1 style={{ fontSize: '48px', fontWeight: 900, color: 'white', textTransform: 'uppercase', margin: 0, letterSpacing: '4px', textShadow: '0 4px 15px rgba(0,0,0,0.5)' }}>
               RESULTADO DA
             </h1>
-            <h1 style={{ fontSize: '90px', fontWeight: 900, color: '#ffffff', textTransform: 'uppercase', margin: '-10px 0 20px 0', letterSpacing: '2px', textShadow: '0 4px 0px #00509e, 0 8px 0px #003366, 0 12px 20px rgba(0,0,0,0.8)' }}>
+            <h1 style={{ fontSize: '90px', fontWeight: 900, color: '#ffffff', textTransform: 'uppercase', margin: '-10px 0 10px 0', letterSpacing: '2px', textShadow: '0 4px 0px #00509e, 0 8px 0px #003366, 0 12px 20px rgba(0,0,0,0.8)' }}>
               VOTAÇÃO
             </h1>
             <div style={{ background: 'rgba(255, 255, 255, 0.1)', border: '2px solid rgba(255, 255, 255, 0.5)', borderRadius: '16px', padding: '12px 30px', display: 'flex', alignItems: 'center', gap: '20px', backdropFilter: 'blur(10px)', boxShadow: '0 0 20px rgba(255, 255, 255, 0.2)' }}>
@@ -214,11 +214,21 @@ const ExportNodeFeed = ({ config, totalVotes, players }: any) => {
               <div style={{ width: '2px', height: '30px', backgroundColor: 'rgba(255, 255, 255, 0.5)' }}></div>
               <span style={{ fontSize: '40px', fontWeight: 900, color: '#ffffff', fontFamily: 'monospace' }}>{totalVotes.toLocaleString('pt-BR')}</span>
             </div>
+
+            {config?.sponsorName && (
+               <div style={{ marginTop: '16px', background: 'rgba(255, 255, 255, 0.1)', border: '2px solid rgba(255, 255, 255, 0.5)', borderRadius: '16px', padding: '12px 32px', display: 'flex', flexDirection: 'column', alignItems: 'center', backdropFilter: 'blur(10px)', boxShadow: '0 0 20px rgba(255, 255, 255, 0.2)' }}>
+                 <span style={{ fontSize: '14px', fontWeight: 900, color: '#93c5fd', textTransform: 'uppercase', letterSpacing: '2px' }}>OFERECIMENTO</span>
+                 <span style={{ fontSize: '24px', fontWeight: 900, color: 'white', textTransform: 'uppercase', margin: '2px 0', textAlign: 'center' }}>{config.sponsorName}</span>
+                 {config.sponsorPrize && (
+                   <span style={{ fontSize: '14px', fontWeight: 700, color: 'white', marginTop: '2px' }}>PRÊMIO: {config.sponsorPrize}</span>
+                 )}
+               </div>
+            )}
           </div>
         </div>
 
         {/* Bottom Section: Bars */}
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', justifyContent: 'center', height: '400px', paddingBottom: '0' }}>
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', justifyContent: 'center', height: '320px', paddingBottom: '0' }}>
           {[...players].sort((a: any, b: any) => b.votesCount - a.votesCount).slice(0, 10).map((player: any, index: number, arr: any[]) => {
             const topVotes = arr[0]?.votesCount || 1;
             const heightPercentage = Math.max(15, (player.votesCount / topVotes) * 100);
@@ -292,7 +302,7 @@ const ExportNodeStory = ({ config, totalVotes, players }: any) => {
         backgroundImage: 'linear-gradient(to bottom right, #020617, #001e3b)',
         position: 'fixed', 
         top: '-10000px',
-        left: '-10000px',
+        left: '-20000px',
         pointerEvents: 'none',
         zIndex: -9999,
         padding: '0',
