@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { Player, SystemConfig, Vote } from '../types';
 import { addPlayer, updatePlayer, deletePlayer, resetAllVotes, getVotesHistory, DEFAULT_CONFIG, deleteVote } from '../dbService';
-import { uploadImageToSupabase } from '../supabase';
+import { uploadImageToSupabase, supabase, getPlayersTableName } from '../supabase';
 import { MuralPanel } from './MuralPanel';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import * as htmlToImage from 'html-to-image';
@@ -768,16 +768,22 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
     setOperationMsg(null);
 
     try {
+      const fullName = position.trim() ? `${name.trim()} (${position.trim()})` : name.trim();
+      const tableName = await getPlayersTableName();
+
       if (isEditing && editingPlayerId) {
-        await updatePlayer(editingPlayerId, {
-          name: name.trim(),
-          team: team.trim(),
-          position: position.trim(),
-          imageUrl,
-          imageFit,
-          imagePosition,
-          order
-        });
+        const { error } = await supabase
+          .from(tableName)
+          .update({
+            nome: fullName,
+            time: team.trim(),
+            logo_url: imageUrl
+          })
+          .eq('id', editingPlayerId);
+
+        if (error) {
+          throw error;
+        }
         setOperationMsg({ type: 'success', text: 'Jogador atualizado com sucesso!' });
       } else {
         if (players.length >= 25) {
@@ -785,16 +791,29 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
           setIsSubmitting(false);
           return;
         }
-        await addPlayer(name.trim(), team.trim(), position.trim(), imageUrl, imageFit, imagePosition, order);
+        
+        const { error } = await supabase
+          .from(tableName)
+          .insert([
+            {
+              nome: fullName,
+              time: team.trim(),
+              logo_url: imageUrl
+            }
+          ]);
+
+        if (error) {
+          throw error;
+        }
         setOperationMsg({ type: 'success', text: 'Jogador cadastrado com sucesso!' });
       }
 
       resetForm();
       onRefresh();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      let errorMsg = 'Ocorreu um erro ao salvar o jogador.';
-      setOperationMsg({ type: 'error', text: errorMsg });
+      let errorMsg = err?.message || 'Ocorreu um erro ao salvar o jogador.';
+      setOperationMsg({ type: 'error', text: `Erro: ${errorMsg}` });
     } finally {
       setIsSubmitting(false);
     }

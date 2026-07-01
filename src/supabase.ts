@@ -90,7 +90,7 @@ export async function hasVotedTodayInSupabase(voterId: string, lastResetAt?: num
       .eq('voter_id', voterId);
 
     if (error) {
-      console.error("Error checking vote in Supabase:", error);
+      console.error("Error checking vote in Supabase:", error.message || error.details || JSON.stringify(error) || error);
       return { voted: false };
     }
 
@@ -115,8 +115,8 @@ export async function hasVotedTodayInSupabase(voterId: string, lastResetAt?: num
       }
     }
     return { voted: false };
-  } catch (err) {
-    console.error("Exception checking vote in Supabase:", err);
+  } catch (err: any) {
+    console.error("Exception checking vote in Supabase:", err?.message || err);
     return { voted: false };
   }
 }
@@ -131,13 +131,13 @@ export async function getVotesFromSupabase(): Promise<{ player_id: string; creat
       .select('player_id, created_at, date_str');
 
     if (error) {
-      console.error("Error fetching votes from Supabase:", error);
+      console.error("Error fetching votes from Supabase:", error.message || error.details || JSON.stringify(error) || error);
       return [];
     }
 
     return (data || []) as any;
-  } catch (err) {
-    console.error("Exception fetching votes from Supabase:", err);
+  } catch (err: any) {
+    console.error("Exception fetching votes from Supabase:", err?.message || err);
     return [];
   }
 }
