@@ -158,7 +158,8 @@ export default function App() {
             id: user.uid,
             name: user.displayName || 'Eleitor',
             email: user.email || '',
-            photoURL: user.photoURL || undefined
+            photoURL: user.photoURL || undefined,
+            phone: user.phoneNumber || undefined
           };
           setVoterInfo(vInfo);
           localStorage.setItem('craque_voter_info', JSON.stringify(vInfo));
@@ -383,7 +384,7 @@ export default function App() {
         ...(voterInfo || { id: voterId, name: 'Anônimo', email: '' }),
         ipAddress: ipAddress || 'N/A',
         locationInfo: locationInfo || 'N/A'
-      });
+      }, navigator.userAgent);
       
       // Save anti-fraud device records on client
       const dateStr = getBahiaDateStr();

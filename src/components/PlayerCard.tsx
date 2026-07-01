@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Award, User, Shield, Check, Share2, X, Search } from 'lucide-react';
-import { Player } from '../types';
+import { Player, SystemConfig } from '../types';
 
 interface PlayerCardProps {
   key?: string | number;
@@ -11,6 +11,7 @@ interface PlayerCardProps {
   votedPlayerId?: string;
   isVoting: boolean;
   isLocked?: boolean;
+  config?: SystemConfig | null;
 }
 
 export default function PlayerCard({
@@ -21,8 +22,10 @@ export default function PlayerCard({
   votedPlayerId,
   isVoting,
   isLocked = false,
+  config,
 }: PlayerCardProps) {
   const [copied, setCopied] = useState(false);
+  const [isClicking, setIsClicking] = useState(false);
   const [isZoomed, setIsZoomed] = useState(false);
   const [fitMode, setFitMode] = useState<'cover' | 'contain'>(player.imageFit || 'cover');
 
@@ -92,6 +95,20 @@ export default function PlayerCard({
 
   const teamTheme = getTeamColorTheme(player.team);
 
+  const getTeamLogoUrl = (teamName: string) => {
+    if (!config) return undefined;
+    const name = teamName.toLowerCase();
+    if (name.includes('azuup')) return config.logoAzuup;
+    if (name.includes('campinense')) return config.logoCampinense;
+    return undefined;
+  };
+
+  const handleVoteClick = () => {
+    setIsClicking(true);
+    onVote(player.id);
+    setTimeout(() => setIsClicking(false), 2000);
+  };
+
   return (
     <>
       <div
@@ -144,7 +161,11 @@ export default function PlayerCard({
             {/* Badges moved below the photo so they don't cover the face */}
             <div className="flex items-center justify-between gap-2 mb-3">
               <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border shadow-xs ${teamTheme.bg} ${teamTheme.border}`}>
-                <Shield className={`w-3.5 h-3.5 ${teamTheme.accentIconColor}`} />
+                {getTeamLogoUrl(player.team) ? (
+                  <img src={getTeamLogoUrl(player.team)} alt={player.team} className="w-3.5 h-3.5 object-contain drop-shadow-sm" />
+                ) : (
+                  <Shield className={`w-3.5 h-3.5 ${teamTheme.accentIconColor}`} />
+                )}
                 <span className="text-[10px] font-black uppercase tracking-wider truncate max-w-[120px]">
                   {player.team}
                 </span>
@@ -192,15 +213,17 @@ export default function PlayerCard({
             ) : (
               <button
                 id={`vote-btn-${player.id}`}
-                onClick={() => onVote(player.id)}
+                onClick={handleVoteClick}
                 disabled={hasVotedToday || isVoting}
-                className={`w-full py-3.5 rounded-2xl font-black text-sm tracking-wide transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer ${
+                className={`w-full py-3.5 rounded-2xl font-black text-sm tracking-wide transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex items-center justify-center gap-2 ${
                   hasVotedToday
                     ? 'bg-slate-50 text-slate-400 border border-slate-150 cursor-not-allowed'
                     : 'bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 text-white shadow-md shadow-blue-500/15 hover:shadow-lg hover:shadow-blue-500/25'
                 }`}
               >
-                {hasVotedToday ? 'Já Votou Hoje' : 'Votar neste Craque'}
+                {isClicking ? (
+                  <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Computando...</>
+                ) : hasVotedToday ? 'Votação Bloqueada' : 'Votar neste Craque'}
               </button>
             )}
 
@@ -213,7 +236,7 @@ export default function PlayerCard({
               }`}
             >
               <Share2 className="w-4 h-4" />
-              <span>{copied ? 'Link Copiado!' : 'Compartilhar Voto'}</span>
+              <span>{copied ? 'Link Copiado!' : 'Indicar Jogador'}</span>
             </button>
           </div>
         </div>

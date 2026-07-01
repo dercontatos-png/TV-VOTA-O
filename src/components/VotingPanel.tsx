@@ -199,10 +199,9 @@ export default function VotingPanel({
 
         {/* Voting Question / Question of the hour */}
         <div className="relative z-10 w-full max-w-4xl mx-auto mt-6 text-center px-4">
-          <div className="relative p-6 md:p-8 bg-gradient-to-b from-white/10 to-white/5 backdrop-blur-xl border border-white/10 rounded-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.3)]">
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-transparent via-blue-400 to-transparent opacity-50"></div>
-            <h2 className="text-base md:text-xl font-display font-medium tracking-wide text-white leading-relaxed drop-shadow-lg max-w-3xl mx-auto" id="question-text">
-              {config?.votingQuestion || 'Quem é o melhor "Prata da Casa"?'}
+          <div className="relative">
+            <h2 className="text-sm md:text-base font-bold tracking-widest text-blue-200 uppercase leading-relaxed drop-shadow-md max-w-3xl mx-auto" id="question-text">
+              Vote no Craque Prata da Casa
             </h2>
           </div>
         </div>
@@ -457,6 +456,7 @@ export default function VotingPanel({
               votedPlayerId={votedPlayerId}
               isVoting={isVoting}
               isLocked={isLocked}
+              config={config}
             />
           ))}
         </div>

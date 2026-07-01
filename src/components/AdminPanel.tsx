@@ -957,24 +957,7 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
           </table>
         </div>
 
-        {/* Security & Authenticity Audit Audit Info */}
-        <div className="border border-slate-300 rounded-xl p-3 bg-slate-50/50 mb-6">
-          <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-800 mb-1 flex items-center gap-1.5">
-            🛡️ Certificado de Auditoria e Segurança de Votos
-          </h3>
-          <p className="text-[10px] text-slate-600 leading-relaxed font-semibold">
-            Este relatório de apuração foi emitido em conformidade com as regras de validação anti-fraude integradas na plataforma. 
-            Cada voto registrado requer validação obrigatória de Nome Completo, DDD Móvel válido e registro eletrônico de IP originário.
-          </p>
-          <div className="grid grid-cols-2 gap-4 mt-2.5 pt-2.5 border-t border-slate-200 text-[10px] font-bold text-slate-700 font-mono">
-            <div>
-              • IPs Únicos Identificados: <span className="text-slate-950 font-black">{Math.max(1, new Set(votesHistory.map(v => v.ipAddress).filter(ip => ip && ip !== 'N/A')).size)}</span>
-            </div>
-            <div>
-              • Status de Autenticação: <span className="text-emerald-700 font-black">VALIDADO & CRIPTOGRAFADO (OK)</span>
-            </div>
-          </div>
-        </div>
+
 
         {/* Footer print section */}
         <div className="flex justify-between items-center text-[9px] text-slate-400 font-bold uppercase mt-8 pt-4 border-t border-slate-200">
@@ -1360,14 +1343,13 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
             <thead>
               <tr className="border-b border-gray-100 text-[10px] font-bold text-gray-400 uppercase tracking-wider pb-2">
                 <th className="py-2">Data/Hora</th>
-                <th className="py-2">Eleitor</th>
-                <th className="py-2">Telefone (Identificador)</th>
+                <th className="py-2">Eleitor (Google Auth & Identificadores)</th>
                 <th className="py-2">Jogador Votado</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-sm">
               {votesHistory.length === 0 ? (
-                <tr><td colSpan={4} className="text-center py-4 text-gray-400">Nenhum voto registrado ainda.</td></tr>
+                <tr><td colSpan={3} className="text-center py-4 text-gray-400">Nenhum voto registrado ainda.</td></tr>
               ) : (
                 votesHistory.map((vote, idx) => {
                   const player = players.find(p => p.id === vote.playerId);
@@ -1379,6 +1361,8 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
                       <td className="py-3">
                         <div className="flex flex-col">
                           <span className="font-semibold text-gray-800">{vote.voterName || 'Anônimo'}</span>
+                          <span className="text-[10px] text-gray-500">{vote.voterEmail || 'Sem email'} {vote.voterPhone && `• ${vote.voterPhone}`}</span>
+                          <span className="text-[9px] text-gray-400 mt-0.5 truncate max-w-[200px]" title={vote.userAgent || ''}>{vote.ipAddress || 'IP N/A'} • {vote.userAgent?.split(' ')[0] || 'Browser N/A'}</span>
                           {getVoterVoteCount(vote) > 1 ? (
                             <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 font-extrabold mt-0.5">
                               ⚠️ Votou {getVoterVoteCount(vote)}x no total
@@ -1390,7 +1374,6 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
                           )}
                         </div>
                       </td>
-                      <td className="py-3 font-mono text-xs text-gray-500">{vote.voterPhone || 'N/A'}</td>
                       <td className="py-3 font-bold text-emerald-700">{player?.name || 'Desconhecido'}</td>
                     </tr>
                   );

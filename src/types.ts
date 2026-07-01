@@ -30,6 +30,7 @@ export interface Vote {
   voterEmail?: string;
   ipAddress?: string;
   locationInfo?: string;
+  userAgent?: string;
 }
 
 export interface SystemConfig {
