@@ -145,7 +145,7 @@ export default function App() {
       if (user) {
         if (user.email && ADMIN_EMAILS.includes(user.email)) {
           setAdminUser(user);
-          if (!isSharedLink) {
+          if (!isSharedLink && !isMuralParam) {
             setView('admin');
           }
         } else {
@@ -170,7 +170,9 @@ export default function App() {
         // to be secure, if firebase says not logged in, we should clear it.
         setVoterInfo(null);
         localStorage.removeItem('craque_voter_info');
-        if (isAdminParam) {
+        if (isMuralParam) {
+          setView('mural');
+        } else if (isAdminParam) {
           setView('admin');
         } else {
           setView('voting');
@@ -179,7 +181,7 @@ export default function App() {
       setCheckingAdmin(false);
     });
     return () => unsubscribe();
-  }, [isSharedLink]);
+  }, [isSharedLink, isMuralParam, isAdminParam]);
 
   // Fetch IP & Location on mount
   useEffect(() => {
@@ -248,18 +250,66 @@ export default function App() {
     }
   };
 
+  // Real-time synchronization for Players and System Config
+  useEffect(() => {
+    let unsubscribePlayers: () => void;
+    let unsubscribeConfig: () => void;
+
+    const setupRealtimeSubscriptions = async () => {
+      try {
+        const { collection, query, orderBy, onSnapshot, doc } = await import('firebase/firestore');
+        const { db } = await import('./firebase');
+        
+        // Subscribe to system config
+        const configRef = doc(db, 'settings', 'voting');
+        unsubscribeConfig = onSnapshot(configRef, (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            import('./dbService').then(({ DEFAULT_CONFIG }) => {
+              setConfig({ ...DEFAULT_CONFIG, ...data } as SystemConfig);
+            });
+          } else {
+            import('./dbService').then(({ DEFAULT_CONFIG }) => setConfig(DEFAULT_CONFIG));
+          }
+        });
+
+        // Subscribe to players
+        const playersRef = collection(db, 'players');
+        const q = query(playersRef, orderBy('votesCount', 'desc'), orderBy('name', 'asc'));
+        unsubscribePlayers = onSnapshot(q, (snapshot) => {
+          const playersData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          } as Player));
+          
+          const sortedPlayers = [...playersData].sort((a, b) => {
+            if (b.votesCount !== a.votesCount) {
+              return b.votesCount - a.votesCount;
+            }
+            return (a.order || 0) - (b.order || 0);
+          });
+          setPlayers(sortedPlayers);
+          setLoading(false);
+        });
+
+      } catch (err) {
+        console.error("Error setting up real-time sync:", err);
+        setLoading(false);
+      }
+    };
+
+    setupRealtimeSubscriptions();
+
+    return () => {
+      if (unsubscribePlayers) unsubscribePlayers();
+      if (unsubscribeConfig) unsubscribeConfig();
+    };
+  }, []);
+
   // Fetch all players and check if user has voted today
   const loadAppData = async () => {
     try {
-      // 1. Fetch system config
-      const fetchedConfig = await getSystemConfig();
-      setConfig(fetchedConfig);
-
-      // 2. Fetch players list
-      const fetchedPlayers = await getPlayers();
-      setPlayers(fetchedPlayers);
-
-      // 3. Query device anti-fraud blocks first
+      // Query device anti-fraud blocks first
       const dateStr = getBahiaDateStr();
       const localBlocked = localStorage.getItem(`craque_voted_${dateStr}`) === 'true';
       const cookieVal = getCookie('craque_voted_dates');
@@ -285,8 +335,6 @@ export default function App() {
       }
     } catch (err) {
       console.error("Error loading application data:", err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -337,9 +385,6 @@ export default function App() {
       setShowSuccessModal(true);
       setRecommendedPlayerId(null); // Clear recommended after successful vote
       
-      // Reload updated lists to sync percentages in real-time
-      const updatedPlayers = await getPlayers();
-      setPlayers(updatedPlayers);
     } catch (err) {
       console.error("Failed to cast vote:", err);
       alert("Não foi possível registrar seu voto. Por favor, tente novamente em instantes.");

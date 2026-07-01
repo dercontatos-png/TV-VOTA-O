@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Player, SystemConfig } from '../types';
-import { getPlayers, getSystemConfig, DEFAULT_CONFIG } from '../dbService';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Cell } from 'recharts';
-import { QrCode } from 'lucide-react';
+import { DEFAULT_CONFIG } from '../dbService';
+import { db } from '../firebase';
+import { collection, onSnapshot, query, orderBy, doc } from 'firebase/firestore';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Cell, Tooltip } from 'recharts';
+import { Trophy, Users } from 'lucide-react';
 
 export function MuralPanel() {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -10,125 +12,199 @@ export function MuralPanel() {
   const [totalVotes, setTotalVotes] = useState(0);
 
   useEffect(() => {
-    // Polling function for real-time updates
-    const fetchData = async () => {
-      try {
-        const [playersData, configData] = await Promise.all([
-          getPlayers(),
-          getSystemConfig()
-        ]);
-        
-        // Sort players by original order or name to keep X-axis stable
-        const sortedPlayers = [...playersData].sort((a, b) => (a.order || 0) - (b.order || 0));
-        setPlayers(sortedPlayers);
-        
-        setTotalVotes(playersData.reduce((sum, p) => sum + p.votesCount, 0));
-        
-        if (configData) {
-          setConfig(configData);
-        }
-      } catch (e) {
-        console.error("Mural update error:", e);
-      }
-    };
+    // Real-time listener for players
+    const playersRef = collection(db, 'players');
+    const q = query(playersRef, orderBy('votesCount', 'desc'), orderBy('name', 'asc'));
+    
+    const unsubscribePlayers = onSnapshot(q, (snapshot) => {
+      const playersData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Player));
+      
+      const sortedPlayers = [...playersData].sort((a, b) => (a.order || 0) - (b.order || 0));
+      setPlayers(sortedPlayers);
+      setTotalVotes(playersData.reduce((sum, p) => sum + p.votesCount, 0));
+    }, (error) => {
+      console.error("Mural players listener error:", error);
+    });
 
-    fetchData();
-    const interval = setInterval(fetchData, 5000);
-    return () => clearInterval(interval);
+    // Real-time listener for config
+    const configRef = doc(db, 'settings', 'voting');
+    const unsubscribeConfig = onSnapshot(configRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setConfig(prev => ({ ...prev, ...data }));
+      }
+    }, (error) => {
+      console.error("Mural config listener error:", error);
+    });
+
+    return () => {
+      unsubscribePlayers();
+      unsubscribeConfig();
+    };
   }, []);
 
   // Format data for Recharts
   const chartData = players.map(player => {
-    const percentage = totalVotes > 0 ? ((player.votesCount / totalVotes) * 100).toFixed(0) : '0';
+    const percentage = totalVotes > 0 ? ((player.votesCount / totalVotes) * 100).toFixed(1) : '0';
     return {
       name: player.name,
       votes: player.votesCount,
       percentage: percentage,
-      label: `${player.votesCount} (${percentage}%)`
+      team: player.team,
+      imageUrl: player.imageUrl
     };
   });
 
-  const generateQRCodeURL = () => {
-    const currentUrl = window.location.origin;
-    return `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(currentUrl)}`;
+  // Custom tick to show player photo and name
+  const CustomTick = (props: any) => {
+    const { x, y, payload } = props;
+    const player = chartData.find(p => p.name === payload.value);
+    
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <foreignObject x={-60} y={15} width={120} height={150}>
+          <div className="flex flex-col items-center justify-start h-full">
+            {player?.imageUrl ? (
+              <div className="w-20 h-20 rounded-full overflow-hidden mb-3 border-4 border-slate-700/50 shadow-[0_0_20px_rgba(0,0,0,0.6)] bg-slate-800">
+                 <img src={player.imageUrl} className="w-full h-full object-cover" alt={player.name} referrerPolicy="no-referrer" />
+              </div>
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-slate-800 border-4 border-slate-700/50 mb-3 flex items-center justify-center text-slate-400 text-2xl font-black shadow-[0_0_20px_rgba(0,0,0,0.6)]">
+                {payload.value.substring(0, 2).toUpperCase()}
+              </div>
+            )}
+            <span className="text-lg font-black text-white text-center uppercase tracking-wider leading-tight w-full truncate px-1 drop-shadow-md">
+              {payload.value}
+            </span>
+            {player?.team && (
+              <span className="text-xs text-emerald-400 font-black uppercase tracking-widest truncate w-full text-center mt-1 drop-shadow-md">
+                {player.team}
+              </span>
+            )}
+          </div>
+        </foreignObject>
+      </g>
+    );
   };
 
   return (
-    <div className="min-h-screen bg-[#0d2e1e] flex flex-col font-sans text-slate-100 p-8">
+    <div className="min-h-screen bg-[#020617] flex flex-col font-sans text-slate-100 relative overflow-hidden">
       
-      {/* Header section outside the white box */}
-      <div className="flex justify-between items-start mb-6">
-        <div className="flex items-center gap-3">
-          {config.logoPrincipal && (
-            <img src={config.logoPrincipal} alt="Logo" className="h-10 object-contain" />
-          )}
-        </div>
+      {/* Background Effects */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-900/30 via-slate-900/0 to-transparent"></div>
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-indigo-900/20 via-slate-900/0 to-transparent"></div>
 
-        <div className="flex gap-4">
-          <div className="bg-white text-slate-800 rounded-xl px-6 py-3 flex flex-col items-center justify-center shadow-lg min-w-32">
-            <span className="text-2xl font-bold">{totalVotes}</span>
-            <span className="text-xs text-gray-500 uppercase tracking-wide">Total de votos</span>
+      <div className="flex flex-col h-screen p-6 md:p-10 relative z-10">
+        
+        {/* Header - Simplified as requested */}
+        <header className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-6">
+            {config.logoPrincipal ? (
+              <img src={config.logoPrincipal} alt="Logo" className="h-20 object-contain filter drop-shadow-[0_0_15px_rgba(255,255,255,0.15)]" />
+            ) : (
+              <div className="w-20 h-20 bg-emerald-500/10 border border-emerald-500/20 rounded-3xl flex items-center justify-center text-emerald-400">
+                <Trophy className="w-10 h-10" />
+              </div>
+            )}
           </div>
 
-          <div className="bg-white text-slate-800 rounded-xl px-4 py-3 flex flex-col items-center justify-center shadow-lg cursor-pointer hover:bg-gray-50 transition-colors">
-            <img src={generateQRCodeURL()} alt="QR Code" className="w-12 h-12 mb-1" />
-            <span className="text-[10px] text-gray-500 uppercase tracking-wide">Scan para votar</span>
+          <div className="flex gap-6 items-center">
+            <div className="flex flex-col items-end">
+              <span className="text-lg text-emerald-400/80 uppercase tracking-widest font-black mb-1">Total de Votos</span>
+              <div className="text-6xl font-black text-white font-mono tracking-tighter drop-shadow-xl">
+                {totalVotes.toLocaleString('pt-BR')}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </header>
 
-      {/* Main White Panel */}
-      <div className="bg-gray-100 rounded-[32px] p-8 md:p-12 flex-grow shadow-2xl flex flex-col">
-        <h1 className="text-2xl md:text-3xl font-medium text-slate-800 mb-12">
-          {config.votingQuestion}
-        </h1>
-
-        <div className="flex-grow w-full min-h-[400px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              margin={{ top: 30, right: 30, left: 0, bottom: 30 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-              <XAxis 
-                dataKey="name" 
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: '#6b7280', fontSize: 12, fontWeight: 600 }}
-                dy={16}
-              />
-              <YAxis 
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: '#9ca3af', fontSize: 12 }}
-                dx={-10}
-                allowDecimals={false}
-              />
-              <Bar 
-                dataKey="votes" 
-                fill="#10b981" 
-                radius={[4, 4, 0, 0]}
-                barSize={60}
-                isAnimationActive={false}
-                label={(props: any) => {
-                  const { x, y, width, value } = props;
-                  // We need to find the percentage for this value from chartData
-                  const dataEntry = chartData[props.index];
-                  const percentage = dataEntry?.percentage || '0';
-                  
-                  return (
-                    <text x={x + width / 2} y={y - 10} fill="#6b7280" textAnchor="middle" fontSize={14}>
-                      {value} ({percentage}%)
-                    </text>
-                  );
-                }}
+        {/* Chart Panel */}
+        <div className="flex-grow bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] border border-white/10 p-8 md:p-12 shadow-2xl relative">
+          
+          {totalVotes === 0 ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500">
+              <Users className="w-24 h-24 mb-6 opacity-20" />
+              <p className="text-3xl font-black uppercase tracking-widest opacity-50">Aguardando Votos</p>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                margin={{ top: 60, right: 30, left: 20, bottom: 130 }}
               >
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill="#10b981" />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+                <defs>
+                  <linearGradient id="colorVotes" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#34d399" stopOpacity={1}/>
+                    <stop offset="100%" stopColor="#047857" stopOpacity={0.7}/>
+                  </linearGradient>
+                  <filter id="glow">
+                    <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                    <feMerge>
+                      <feMergeNode in="coloredBlur"/>
+                      <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                  </filter>
+                </defs>
+                
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.08)" />
+                
+                <XAxis 
+                  dataKey="name" 
+                  axisLine={{ stroke: 'rgba(255,255,255,0.15)', strokeWidth: 2 }}
+                  tickLine={false}
+                  tick={<CustomTick />}
+                  interval={0}
+                />
+                
+                <YAxis 
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#94a3b8', fontSize: 18, fontWeight: 700 }}
+                  dx={-20}
+                  allowDecimals={false}
+                />
+                
+                <Tooltip
+                  cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                  contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', borderColor: 'rgba(255,255,255,0.15)', borderRadius: '16px', color: '#fff', backdropFilter: 'blur(12px)' }}
+                  itemStyle={{ color: '#34d399', fontWeight: '900', fontSize: '20px' }}
+                />
+
+                <Bar 
+                  dataKey="votes" 
+                  fill="url(#colorVotes)" 
+                  radius={[12, 12, 0, 0]}
+                  barSize={100}
+                  isAnimationActive={true}
+                  animationDuration={1000}
+                  label={(props: any) => {
+                    const { x, y, width, value } = props;
+                    const dataEntry = chartData[props.index];
+                    const percentage = dataEntry?.percentage || '0';
+                    if (value === 0) return null;
+                    
+                    return (
+                      <g transform={`translate(${x + width / 2},${y - 20})`}>
+                        <text fill="#ffffff" textAnchor="middle" fontSize={26} fontWeight={900} filter="url(#glow)">
+                          {value}
+                        </text>
+                        <text y={22} fill="#a7f3d0" textAnchor="middle" fontSize={16} fontWeight={800}>
+                          {percentage}%
+                        </text>
+                      </g>
+                    );
+                  }}
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
     </div>

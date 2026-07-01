@@ -135,18 +135,7 @@ export default function PlayerCard({
             </div>
           </button>
           
-          {player.imageUrl && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setFitMode(fitMode === 'cover' ? 'contain' : 'cover');
-              }}
-              className="absolute top-3 left-3 bg-black/60 hover:bg-black/80 text-white text-[10px] font-bold px-2 py-1 rounded-md backdrop-blur-md transition-colors z-10 uppercase tracking-widest border border-white/20"
-              title="Ajustar modo de visualização da foto"
-            >
-              Ajustar Foto
-            </button>
-          )}
+
         </div>
 
         {/* Main content body */}
