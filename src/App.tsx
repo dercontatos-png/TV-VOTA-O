@@ -281,15 +281,17 @@ export default function App() {
     // Initial load
     fetchFreshData(true);
 
-    // Poll every 3 seconds to keep the interface updated in near real-time
+    // Poll every 15 seconds to keep the interface updated in near real-time without slamming the server/Supabase
     intervalId = setInterval(() => {
-      fetchFreshData(false);
-    }, 3000);
+      if (view !== 'admin') {
+        fetchFreshData(false);
+      }
+    }, 15000);
 
     return () => {
       clearInterval(intervalId);
     };
-  }, []);
+  }, [view]);
 
   // Fetch all players and check if user has voted today
   const loadAppData = async () => {

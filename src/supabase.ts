@@ -138,10 +138,11 @@ export async function getVotesFromSupabase(): Promise<{ player_id: string; creat
 }
 
 export async function deleteVoteInSupabase(voteId: string): Promise<void> {
+  const numId = Number(voteId);
   const { error } = await supabase
     .from('votos')
     .delete()
-    .eq('id', voteId);
+    .eq('id', isNaN(numId) ? voteId : numId);
 
   if (error) {
     console.error("Error deleting vote in Supabase:", error);

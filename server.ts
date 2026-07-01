@@ -728,6 +728,59 @@ async function safeDeletePlayer(id: string) {
   }
 }
 
+async function safeDeleteVote(id: string) {
+  if (useLocalFallback) {
+    const localDb = readLocalDb();
+    const vote = localDb.votes[id];
+    if (vote) {
+      const playerId = vote.playerId;
+      const playerIndex = localDb.players.findIndex((p: any) => p.id === playerId);
+      if (playerIndex !== -1) {
+        localDb.players[playerIndex].votesCount = Math.max(0, (localDb.players[playerIndex].votesCount || 0) - 1);
+      }
+      delete localDb.votes[id];
+      writeLocalDb(localDb);
+    }
+    return { success: true };
+  }
+  try {
+    const voteDocRef = doc(db, 'votes', id);
+    const voteSnap = await getDoc(voteDocRef);
+    if (voteSnap.exists()) {
+      const playerId = voteSnap.data().playerId;
+      const playerDocRef = doc(db, 'players', playerId);
+      const playerSnap = await getDoc(playerDocRef);
+      const batch = writeBatch(db);
+      batch.delete(voteDocRef);
+      if (playerSnap.exists()) {
+        batch.update(playerDocRef, {
+          votesCount: Math.max(0, (playerSnap.data().votesCount || 0) - 1)
+        });
+      }
+      await batch.commit();
+      cachedPlayers = null;
+    }
+    return { success: true };
+  } catch (err: any) {
+    if (isQuotaError(err)) {
+      useLocalFallback = true;
+      const localDb = readLocalDb();
+      const vote = localDb.votes[id];
+      if (vote) {
+        const playerId = vote.playerId;
+        const playerIndex = localDb.players.findIndex((p: any) => p.id === playerId);
+        if (playerIndex !== -1) {
+          localDb.players[playerIndex].votesCount = Math.max(0, (localDb.players[playerIndex].votesCount || 0) - 1);
+        }
+        delete localDb.votes[id];
+        writeLocalDb(localDb);
+      }
+      return { success: true };
+    }
+    throw err;
+  }
+}
+
 // REST API Endpoints
 
 app.get('/api/players', async (req, res) => {
@@ -766,6 +819,16 @@ app.delete('/api/players/:id', async (req, res) => {
     res.json(result);
   } catch (err: any) {
     console.error("Error deleting player:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/votes/:id', async (req, res) => {
+  try {
+    const result = await safeDeleteVote(req.params.id);
+    res.json(result);
+  } catch (err: any) {
+    console.error("Error deleting vote:", err);
     res.status(500).json({ error: err.message });
   }
 });

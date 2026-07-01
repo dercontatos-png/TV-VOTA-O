@@ -5,7 +5,7 @@ import {
   Link, Copy, Check, Monitor, ExternalLink, ArrowUp, ArrowDown, Image as ImageIcon, ShieldAlert
 } from 'lucide-react';
 import { Player, SystemConfig, Vote } from '../types';
-import { addPlayer, updatePlayer, deletePlayer, resetAllVotes, getVotesHistory, getAllVotes, DEFAULT_CONFIG } from '../dbService';
+import { addPlayer, updatePlayer, deletePlayer, resetAllVotes, getVotesHistory, DEFAULT_CONFIG, deleteVote } from '../dbService';
 import { MuralPanel } from './MuralPanel';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import * as htmlToImage from 'html-to-image';
@@ -438,7 +438,6 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
   const [configMsg, setConfigMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const [votesHistory, setVotesHistory] = useState<Vote[]>([]);
-  const [allVotes, setAllVotes] = useState<Vote[]>([]);
 
   // Campaign Management states
   const [newCampaignName, setNewCampaignName] = useState('');
@@ -516,8 +515,10 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
   const bannerRef = useRef<HTMLInputElement>(null);
   const sponsorLogoRef = useRef<HTMLInputElement>(null);
 
+  const isFirstLoadRef = useRef(true);
+
   useEffect(() => {
-    if (config) {
+    if (config && isFirstLoadRef.current) {
       setVotingQuestion(config.votingQuestion || '');
       setLogoAzuup(config.logoAzuup || '');
       setLogoCampinense(config.logoCampinense || '');
@@ -530,6 +531,7 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
       setSponsorName(config.sponsorName || 'Lourival Junior');
       setSponsorPrize(config.sponsorPrize || 'R$ 500');
       setSponsorLogoUrl(config.sponsorLogoUrl || '');
+      isFirstLoadRef.current = false;
     }
   }, [config]);
 
@@ -544,15 +546,13 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
     try {
       const history = await getVotesHistory(100);
       setVotesHistory(history);
-      const all = await getAllVotes();
-      setAllVotes(all);
     } catch (e) {
       console.error(e);
     }
   };
 
   const getVoterVoteCount = (vote: Vote) => {
-    const listToSearch = allVotes.length > 0 ? allVotes : votesHistory;
+    const listToSearch = votesHistory;
     if (!listToSearch || listToSearch.length === 0) return 1;
     
     const phone = vote.voterPhone;
@@ -612,8 +612,8 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = teamId === 'principal' || teamId === 'sponsor' ? 400 : 200;
-        const MAX_HEIGHT = teamId === 'principal' || teamId === 'sponsor' ? 150 : 200;
+        const MAX_WIDTH = teamId === 'principal' || teamId === 'sponsor' ? 240 : 100;
+        const MAX_HEIGHT = teamId === 'principal' || teamId === 'sponsor' ? 100 : 100;
         let width = img.width;
         let height = img.height;
 
@@ -642,8 +642,8 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
 
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height);
-          // Converter para WebP com compressão de 0.8 para ficar super leve mantendo transparência
-          const dataUrl = canvas.toDataURL('image/webp', 0.8);
+          // Converter para WebP com compressão de 0.3 para ficar super leve mantendo transparência
+          const dataUrl = canvas.toDataURL('image/webp', 0.3);
           applyLogo(dataUrl);
         } else {
           applyLogo(reader.result as string);
@@ -665,8 +665,8 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 800;
-        const MAX_HEIGHT = 400;
+        const MAX_WIDTH = 480;
+        const MAX_HEIGHT = 240;
         let width = img.width;
         let height = img.height;
 
@@ -689,7 +689,7 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height);
           // Converter para WebP para máxima compressão
-          const dataUrl = canvas.toDataURL('image/webp', 0.8);
+          const dataUrl = canvas.toDataURL('image/webp', 0.3);
           setBannerUrl(dataUrl);
         } else {
           setBannerUrl(reader.result as string);
@@ -712,8 +712,8 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 450;
-        const MAX_HEIGHT = 450;
+        const MAX_WIDTH = 180;
+        const MAX_HEIGHT = 180;
         let width = img.width;
         let height = img.height;
 
@@ -736,7 +736,7 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height);
           // Converter para WebP para máxima compressão
-          const dataUrl = canvas.toDataURL('image/webp', 0.8);
+          const dataUrl = canvas.toDataURL('image/webp', 0.3);
           setImageUrl(dataUrl);
         } else {
           setImageUrl(reader.result as string);
@@ -1411,9 +1411,11 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
                           onClick={async () => {
                             if (window.confirm('Tem certeza que deseja apagar este voto?')) {
                               try {
-                                const { deleteVote } = await import('../dbService');
-                                await deleteVote(vote.id);
+                                await deleteVote(vote.id, vote.playerId);
                                 loadVotesHistory();
+                                if (onRefresh) {
+                                  await onRefresh();
+                                }
                               } catch (e: any) {
                                 alert(e.message || 'Erro ao apagar voto.');
                               }
