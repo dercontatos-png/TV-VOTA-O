@@ -741,36 +741,19 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
                     const node = document.getElementById('export-mural-node');
                     if (node) {
                       setIsExporting(true);
-                      // Save old styles
-                      const originalDisplay = node.style.display;
-                      const originalTop = node.style.top;
-                      const originalLeft = node.style.left;
-                      const originalPosition = node.style.position;
-                      const originalOpacity = node.style.opacity;
-                      const originalZIndex = node.style.zIndex;
-
-                      // Only need to ensure it's fully opaque if we were hiding it, but it's already block at -10000px
-                      node.style.opacity = '1';
 
                       try {
                         // Allow a small delay for images to fully load if any changed recently
                         await new Promise(r => setTimeout(r, 1000));
-                        const dataUrl = await htmlToImage.toPng(node, { pixelRatio: 2, width: 1920, height: 1080 });
+                        const dataUrl = await htmlToImage.toJpeg(node, { pixelRatio: 1, width: 1920, height: 1080, quality: 0.95 });
                         const link = document.createElement('a');
-                        link.download = 'ranking-craque.png';
+                        link.download = 'ranking-craque.jpg';
                         link.href = dataUrl;
                         link.click();
                       } catch (err) {
                         console.error('Failed to export image', err);
                         alert('Erro ao exportar a imagem. Tente novamente.');
                       } finally {
-                        // Restore old styles
-                        node.style.display = originalDisplay;
-                        node.style.top = originalTop;
-                        node.style.left = originalLeft;
-                        node.style.position = originalPosition;
-                        node.style.opacity = originalOpacity;
-                        node.style.zIndex = originalZIndex;
                         setIsExporting(false);
                       }
                     }
@@ -1231,6 +1214,11 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
                   >
                     {logoPrincipal ? <img src={logoPrincipal} className="h-full object-contain p-2" /> : <span className="text-xs text-gray-400 font-bold px-2 text-center">Clique para Mudar</span>}
                   </div>
+                  {logoPrincipal && (
+                    <button type="button" onClick={() => setLogoPrincipal('')} className="mt-2 text-[10px] font-bold text-red-500 hover:text-red-700 uppercase tracking-wider">
+                      Remover
+                    </button>
+                  )}
                   <input type="file" ref={logoPrincipalRef} className="hidden" accept="image/*" onChange={(e) => {
                     if (e.target.files?.[0]) processTeamLogoFile(e.target.files[0], 'principal');
                   }} />
@@ -1244,6 +1232,11 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
                   >
                     {logoAzuup ? <img src={logoAzuup} className="h-full object-contain p-2" /> : <span className="text-xs text-gray-400 font-bold px-2 text-center">Clique para Mudar</span>}
                   </div>
+                  {logoAzuup && (
+                    <button type="button" onClick={() => setLogoAzuup('')} className="mt-2 text-[10px] font-bold text-red-500 hover:text-red-700 uppercase tracking-wider">
+                      Remover
+                    </button>
+                  )}
                   <input type="file" ref={logoAzuupRef} className="hidden" accept="image/*" onChange={(e) => {
                     if (e.target.files?.[0]) processTeamLogoFile(e.target.files[0], 'azuup');
                   }} />
@@ -1257,6 +1250,11 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
                   >
                     {logoCampinense ? <img src={logoCampinense} className="h-full object-contain p-2" /> : <span className="text-xs text-gray-400 font-bold px-2 text-center">Clique para Mudar</span>}
                   </div>
+                  {logoCampinense && (
+                    <button type="button" onClick={() => setLogoCampinense('')} className="mt-2 text-[10px] font-bold text-red-500 hover:text-red-700 uppercase tracking-wider">
+                      Remover
+                    </button>
+                  )}
                   <input type="file" ref={logoCampinenseRef} className="hidden" accept="image/*" onChange={(e) => {
                     if (e.target.files?.[0]) processTeamLogoFile(e.target.files[0], 'campinense');
                   }} />
@@ -1270,6 +1268,11 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
                   >
                     {sponsorLogoUrl ? <img src={sponsorLogoUrl} className="h-full object-contain p-2" /> : <span className="text-xs text-gray-400 font-bold px-2 text-center">Clique para Mudar</span>}
                   </div>
+                  {sponsorLogoUrl && (
+                    <button type="button" onClick={() => setSponsorLogoUrl('')} className="mt-2 text-[10px] font-bold text-red-500 hover:text-red-700 uppercase tracking-wider">
+                      Remover
+                    </button>
+                  )}
                   <input type="file" ref={sponsorLogoRef} className="hidden" accept="image/*" onChange={(e) => {
                     if (e.target.files?.[0]) processTeamLogoFile(e.target.files[0], 'sponsor');
                   }} />
@@ -1470,7 +1473,8 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
           display: 'block', 
           width: '1920px', 
           height: '1080px', 
-          backgroundColor: 'transparent', 
+          backgroundColor: '#0f172a', /* slate-900 */
+          backgroundImage: 'linear-gradient(to bottom right, #0f172a, #1e293b)',
           position: 'fixed', 
           top: '-10000px',
           left: '-10000px',
@@ -1501,25 +1505,33 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
 
             {/* Center: Title */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '-20px' }}>
-              <h1 style={{ fontSize: '64px', fontWeight: 900, color: 'white', textTransform: 'uppercase', margin: 0, letterSpacing: '4px', textShadow: '0 4px 10px rgba(0,0,0,0.8)' }}>
+              <h1 style={{ fontSize: '64px', fontWeight: 900, color: 'white', textTransform: 'uppercase', margin: 0, letterSpacing: '4px', textShadow: '0 4px 15px rgba(0,0,0,0.5)' }}>
                 RESULTADO DA
               </h1>
-              <h1 style={{ fontSize: '110px', fontWeight: 900, color: 'white', textTransform: 'uppercase', margin: '-20px 0 20px 0', letterSpacing: '2px', textShadow: '0 4px 15px rgba(0,0,0,0.8)' }}>
+              <h1 style={{ 
+                fontSize: '120px', 
+                fontWeight: 900, 
+                color: '#fbbf24', 
+                textTransform: 'uppercase', 
+                margin: '-20px 0 20px 0', 
+                letterSpacing: '2px', 
+                textShadow: '0 4px 0px #b45309, 0 8px 0px #78350f, 0 12px 20px rgba(0,0,0,0.8)' 
+              }}>
                 VOTAÇÃO
               </h1>
-              <div style={{ background: 'rgba(2, 6, 23, 0.9)', border: '2px solid rgba(96, 165, 250, 0.8)', borderRadius: '16px', padding: '16px 40px', display: 'flex', alignItems: 'center', gap: '24px', backdropFilter: 'blur(10px)', boxShadow: '0 8px 30px rgba(0,0,0,0.5)' }}>
+              <div style={{ background: 'rgba(2, 6, 23, 0.7)', border: '2px solid rgba(251, 191, 36, 0.5)', borderRadius: '16px', padding: '16px 40px', display: 'flex', alignItems: 'center', gap: '24px', backdropFilter: 'blur(10px)', boxShadow: '0 0 20px rgba(245, 158, 11, 0.3)' }}>
                 <span style={{ fontSize: '24px', color: 'white', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '2px' }}>TOTAL DE VOTOS</span>
-                <div style={{ width: '2px', height: '40px', backgroundColor: 'rgba(96, 165, 250, 0.5)' }}></div>
-                <span style={{ fontSize: '48px', fontWeight: 900, color: '#93c5fd', fontFamily: 'monospace' }}>{totalVotes.toLocaleString('pt-BR')}</span>
+                <div style={{ width: '2px', height: '40px', backgroundColor: 'rgba(251, 191, 36, 0.5)' }}></div>
+                <span style={{ fontSize: '48px', fontWeight: 900, color: '#fbbf24', fontFamily: 'monospace' }}>{totalVotes.toLocaleString('pt-BR')}</span>
               </div>
             </div>
 
             {/* Right side: Sponsor */}
             <div style={{ minWidth: '350px' }}>
               {config?.sponsorName && (
-                <div style={{ background: 'rgba(2, 6, 23, 0.9)', border: '2px solid rgba(96, 165, 250, 0.8)', borderRadius: '24px', padding: '32px 48px', display: 'flex', alignItems: 'center', gap: '32px', backdropFilter: 'blur(10px)', boxShadow: '0 8px 30px rgba(0,0,0,0.5)' }}>
+                <div style={{ background: 'rgba(2, 6, 23, 0.7)', border: '2px solid rgba(251, 191, 36, 0.5)', borderRadius: '24px', padding: '32px 48px', display: 'flex', alignItems: 'center', gap: '32px', backdropFilter: 'blur(10px)', boxShadow: '0 0 20px rgba(245, 158, 11, 0.3)' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', width: '100%' }}>
-                    <span style={{ fontSize: '20px', fontWeight: 900, color: '#93c5fd', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '2px' }}>OFERECIMENTO</span>
+                    <span style={{ fontSize: '20px', fontWeight: 900, color: '#fbbf24', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '2px' }}>OFERECIMENTO</span>
                     <span style={{ fontSize: '42px', fontWeight: 900, color: 'white', textTransform: 'uppercase' }}>{config.sponsorName}</span>
                     {config.sponsorPrize && (
                       <span style={{ fontSize: '28px', fontWeight: 700, color: 'white', marginTop: '8px' }}>PRÊMIO: {config.sponsorPrize}</span>
@@ -1539,19 +1551,19 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
               return (
                 <div key={index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '160px', flexShrink: 0, justifyContent: 'flex-end', height: '100%' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '16px' }}>
-                    <span style={{ fontSize: '48px', fontWeight: 900, color: 'white', textShadow: '0 4px 15px rgba(0,0,0,0.8)' }}>
+                    <span style={{ fontSize: '48px', fontWeight: 900, color: '#fbbf24', textShadow: '0 4px 15px rgba(0,0,0,0.8)' }}>
                       {player.votesCount}
                     </span>
-                    <span style={{ fontSize: '24px', color: '#93c5fd', fontWeight: 800, textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
+                    <span style={{ fontSize: '24px', color: '#fcd34d', fontWeight: 800, textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
                       {totalVotes > 0 ? ((player.votesCount / totalVotes) * 100).toFixed(1) : 0}%
                     </span>
                   </div>
                   
                   <div style={{ zIndex: 20, marginBottom: '-70px' }}>
                     {player.imageUrl ? (
-                      <img crossOrigin="anonymous" src={player.imageUrl} style={{ width: '140px', height: '140px', borderRadius: '50%', objectFit: 'cover', border: '4px solid #60a5fa', backgroundColor: '#0f172a', boxShadow: '0 8px 25px rgba(0,0,0,0.8)' }} />
+                      <img crossOrigin="anonymous" src={player.imageUrl} style={{ width: '140px', height: '140px', borderRadius: '50%', objectFit: 'cover', border: '4px solid white', backgroundColor: '#0f172a', boxShadow: '0 0 20px rgba(251, 191, 36, 0.8)' }} />
                     ) : (
-                      <div style={{ width: '140px', height: '140px', borderRadius: '50%', backgroundColor: '#0f172a', border: '4px solid #60a5fa', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px', fontWeight: 900, color: 'white', boxShadow: '0 8px 25px rgba(0,0,0,0.8)' }}>
+                      <div style={{ width: '140px', height: '140px', borderRadius: '50%', backgroundColor: '#0f172a', border: '4px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px', fontWeight: 900, color: 'white', boxShadow: '0 0 20px rgba(251, 191, 36, 0.8)' }}>
                         {player.name.substring(0, 2).toUpperCase()}
                       </div>
                     )}
@@ -1561,22 +1573,26 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
                     width: '100%', 
                     height: `${(heightPercentage / 100) * 350}px`, 
                     minHeight: '120px',
-                    background: 'rgba(2, 6, 23, 0.9)', 
-                    borderRadius: '24px 24px 0 0',
-                    border: '3px solid #60a5fa',
+                    background: 'rgba(0, 0, 0, 0.7)', 
+                    borderRadius: '80px 80px 0 0',
+                    border: '3px solid #fbbf24',
                     borderBottom: 'none',
-                    boxShadow: '0 -8px 30px rgba(0,0,0,0.6)',
+                    boxShadow: '0 0 20px rgba(251, 191, 36, 0.5), inset 0 0 20px rgba(251, 191, 36, 0.2)',
                     zIndex: 10,
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'flex-end',
-                    paddingBottom: '24px'
+                    paddingBottom: '0'
                   }}>
-                    <div style={{ textAlign: 'center', width: '100%', padding: '0 10px' }}>
-                      <div style={{ fontSize: '20px', fontWeight: 900, color: 'white', textTransform: 'uppercase', wordBreak: 'break-word', lineHeight: 1.1 }}>
+                    <div style={{ backgroundColor: 'black', borderTop: '3px solid #fbbf24', width: '100%', padding: '12px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60px' }}>
+                      <div style={{ fontSize: '20px', fontWeight: 900, color: 'white', textTransform: 'uppercase', wordBreak: 'break-word', lineHeight: 1.1, textAlign: 'center' }}>
                         {player.name}
                       </div>
-                      {player.position && <div style={{ fontSize: '14px', fontWeight: 800, color: '#bfdbfe', textTransform: 'uppercase', marginTop: '8px' }}>{player.position}</div>}
+                      {player.position && (
+                         <div style={{ fontSize: '14px', fontWeight: 700, color: '#fbbf24', textTransform: 'uppercase', marginTop: '4px', textAlign: 'center' }}>
+                           {player.position}
+                         </div>
+                      )}
                     </div>
                   </div>
                 </div>

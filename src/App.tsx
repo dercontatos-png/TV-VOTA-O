@@ -75,7 +75,8 @@ function validateBrazilianPhone(phone: string): string | null {
 
 // Defina aqui quais e-mails têm permissão de Administrador
 const ADMIN_EMAILS = [
-  'der.contatos@gmail.com'
+  'der.contatos@gmail.com',
+  'tvchapadaoficial@gmail.com'
 ];
 
 export default function App() {
@@ -592,9 +593,6 @@ export default function App() {
 
               <div className="text-center mb-8">
                 <h3 className="text-xl font-black text-slate-900 mb-2 font-display">Identifique-se para votar</h3>
-                <p className="text-slate-600 text-sm leading-relaxed max-w-[280px] mx-auto font-medium">
-                  Para garantir a validade e o controle de 1 voto por pessoa, o login é obrigatório.
-                </p>
               </div>
 
               {/* Login Google Auth Form */}

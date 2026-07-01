@@ -158,91 +158,62 @@ export function MuralPanel({ staticPlayers, staticConfig }: MuralPanelProps = {}
           </div>
         </header>
 
-        {/* Chart Panel */}
-        <div className="flex-grow bg-white/5 backdrop-blur-xl rounded-[2rem] border border-white/10 p-6 md:p-8 shadow-2xl relative mb-12 mr-[200px] flex flex-col">
-          
-          {totalVotes === 0 ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500">
-              <Users className="w-24 h-24 mb-6 opacity-20" />
-              <p className="text-3xl font-black uppercase tracking-widest opacity-50">Aguardando Votos</p>
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={chartData}
-                margin={{ top: 80, right: 20, left: 0, bottom: 180 }}
-              >
-                <defs>
-                  <linearGradient id="colorVotes" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#ffffff" stopOpacity={1}/>
-                    <stop offset="100%" stopColor="#93c5fd" stopOpacity={0.9}/>
-                  </linearGradient>
-                  <filter id="glow">
-                    <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                    <feMerge>
-                      <feMergeNode in="coloredBlur"/>
-                      <feMergeNode in="SourceGraphic"/>
-                    </feMerge>
-                  </filter>
-                </defs>
+        {/* Chart Panel - Replaced with flexbox bars for perfect styling */}
+        <div className="flex-grow relative flex items-end justify-center pb-8 gap-4 md:gap-8 lg:gap-12 mt-12 w-full">
+          {[...players].sort((a, b) => b.votesCount - a.votesCount).slice(0, 7).map((player, index, arr) => {
+            const topVotes = arr[0]?.votesCount || 1;
+            const heightPercentage = Math.max(15, (player.votesCount / topVotes) * 100);
+            
+            return (
+              <div key={index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 'min(160px, 12vw)', flexShrink: 0, justifyContent: 'flex-end', height: '100%' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '16px' }}>
+                  <span style={{ fontSize: 'clamp(24px, 3vw, 48px)', fontWeight: 900, color: '#fbbf24', textShadow: '0 4px 15px rgba(0,0,0,0.8)' }}>
+                    {player.votesCount}
+                  </span>
+                  <span style={{ fontSize: 'clamp(14px, 1.5vw, 24px)', color: '#fcd34d', fontWeight: 800, textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
+                    {totalVotes > 0 ? ((player.votesCount / totalVotes) * 100).toFixed(1) : 0}%
+                  </span>
+                </div>
                 
-                <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="rgba(255,255,255,0.15)" />
-                
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={{ stroke: 'rgba(255,255,255,0.4)', strokeWidth: 3 }}
-                  tickLine={false}
-                  tick={<CustomTick />}
-                  interval={0}
-                />
-                
-                <YAxis 
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: '#bfdbfe', fontSize: 24, fontWeight: 800 }}
-                  dx={-15}
-                  allowDecimals={false}
-                  domain={[0, (dataMax: number) => (dataMax === 0 ? 10 : Math.ceil(dataMax * 1.2))]}
-                />
-                
-                <Tooltip
-                  cursor={{ fill: 'rgba(255,255,255,0.1)' }}
-                  contentStyle={{ backgroundColor: 'rgba(0,40,85,0.95)', borderColor: 'rgba(255,255,255,0.3)', borderRadius: '12px', color: '#fff', backdropFilter: 'blur(12px)' }}
-                  itemStyle={{ color: '#60a5fa', fontWeight: '900', fontSize: '24px' }}
-                />
+                <div style={{ zIndex: 20, marginBottom: 'clamp(-40px, -5vw, -70px)' }}>
+                  {player.imageUrl ? (
+                    <img crossOrigin="anonymous" src={player.imageUrl} style={{ width: 'clamp(80px, 9vw, 140px)', height: 'clamp(80px, 9vw, 140px)', borderRadius: '50%', objectFit: 'cover', border: 'clamp(2px, 0.3vw, 4px) solid white', backgroundColor: '#0f172a', boxShadow: '0 0 20px rgba(251, 191, 36, 0.8)' }} />
+                  ) : (
+                    <div style={{ width: 'clamp(80px, 9vw, 140px)', height: 'clamp(80px, 9vw, 140px)', borderRadius: '50%', backgroundColor: '#0f172a', border: 'clamp(2px, 0.3vw, 4px) solid white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(24px, 3vw, 48px)', fontWeight: 900, color: 'white', boxShadow: '0 0 20px rgba(251, 191, 36, 0.8)' }}>
+                      {player.name.substring(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                </div>
 
-                <Bar 
-                  dataKey="votes" 
-                  fill="url(#colorVotes)" 
-                  radius={[12, 12, 0, 0]}
-                  maxBarSize={90}
-                  isAnimationActive={!staticPlayers}
-                  animationDuration={1000}
-                  label={(props: any) => {
-                    const { x, y, width, value } = props;
-                    const dataEntry = chartData[props.index];
-                    const percentage = dataEntry?.percentage || '0';
-                    if (value === 0) return null;
-                    
-                    return (
-                      <g transform={`translate(${x + width / 2},${y - 15})`}>
-                        <text fill="#ffffff" textAnchor="middle" fontSize={28} fontWeight={900} filter="url(#glow)" y={-25}>
-                          {value}
-                        </text>
-                        <text fill="#bfdbfe" textAnchor="middle" fontSize={16} fontWeight={800} y={-5}>
-                          {percentage}%
-                        </text>
-                      </g>
-                    );
-                  }}
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
+                <div style={{ 
+                  width: '100%', 
+                  height: `${(heightPercentage / 100) * 45}vh`, 
+                  minHeight: '80px',
+                  background: 'rgba(0, 0, 0, 0.7)', 
+                  borderRadius: '80px 80px 0 0',
+                  border: 'clamp(2px, 0.2vw, 3px) solid #fbbf24',
+                  borderBottom: 'none',
+                  boxShadow: '0 0 20px rgba(251, 191, 36, 0.5), inset 0 0 20px rgba(251, 191, 36, 0.2)',
+                  zIndex: 10,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'flex-end',
+                  paddingBottom: '0'
+                }}>
+                  <div style={{ backgroundColor: 'black', borderTop: 'clamp(2px, 0.2vw, 3px) solid #fbbf24', width: '100%', padding: 'clamp(8px, 1vw, 12px) 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 'clamp(40px, 5vh, 60px)' }}>
+                    <div style={{ fontSize: 'clamp(12px, 1.2vw, 20px)', fontWeight: 900, color: 'white', textTransform: 'uppercase', wordBreak: 'break-word', lineHeight: 1.1, textAlign: 'center' }}>
+                      {player.name}
+                    </div>
+                    {player.position && (
+                       <div style={{ fontSize: 'clamp(9px, 0.9vw, 14px)', fontWeight: 700, color: '#fbbf24', textTransform: 'uppercase', marginTop: '4px', textAlign: 'center' }}>
+                         {player.position}
+                       </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
