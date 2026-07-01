@@ -335,6 +335,10 @@ export async function resetAllVotes(): Promise<void> {
     if (operationCount > 0) {
       await batch.commit();
     }
+    
+    // Update system config to force clients to clear local storage
+    const configRef = doc(db, 'settings', 'voting');
+    await updateDoc(configRef, { lastResetAt: Date.now() });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'batch_reset_all');
   }
@@ -350,7 +354,10 @@ export const DEFAULT_CONFIG: SystemConfig = {
   endDate: '',
   votingEnabled: true,
   bannerUrl: '',
-  primaryColor: '#2563eb' // default blue-600 hex
+  primaryColor: '#2563eb', // default blue-600 hex
+  sponsorName: 'Lourival Junior',
+  sponsorPrize: 'R$ 500',
+  sponsorLogoUrl: ''
 };
 
 export async function getSystemConfig(): Promise<SystemConfig> {

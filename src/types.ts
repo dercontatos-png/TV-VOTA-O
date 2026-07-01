@@ -42,4 +42,8 @@ export interface SystemConfig {
   votingEnabled: boolean;
   bannerUrl?: string; // Base64 or url banner
   primaryColor?: string; // Hex color or pre-defined tailwind class base
+  lastResetAt?: number; // Epoch of last reset
+  sponsorLogoUrl?: string; // Base64 or url for sponsor logo
+  sponsorName?: string;
+  sponsorPrize?: string;
 }

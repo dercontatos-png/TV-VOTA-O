@@ -112,14 +112,41 @@ export function MuralPanel() {
       <div className="flex flex-col h-screen p-6 md:p-8 relative z-10">
         
         {/* Header */}
-        <header className="flex justify-between items-start mb-8">
-          <div className="bg-[#0f172a]/80 backdrop-blur-md border border-white/10 rounded-xl p-4 shadow-2xl max-w-2xl">
+        <header className="flex justify-between items-start mb-8 gap-4">
+          <div className="bg-[#0f172a]/80 backdrop-blur-md border border-white/10 rounded-xl p-4 shadow-2xl max-w-2xl flex-grow shrink-0 flex items-center justify-between">
             <h1 className="text-xl md:text-2xl font-black text-white uppercase tracking-widest leading-snug">
               RESULTADO DOS VOTOS
             </h1>
           </div>
+          
+          {config?.sponsorName && (
+            <div className="bg-amber-900/40 backdrop-blur-md border border-amber-500/30 rounded-xl p-3 shadow-2xl flex items-center gap-4 shrink-0 max-w-sm">
+              {config.sponsorLogoUrl ? (
+                <div className="w-16 h-16 rounded-xl bg-white p-1.5 shrink-0 flex items-center justify-center">
+                  <img src={config.sponsorLogoUrl} alt={config.sponsorName} className="max-w-full max-h-full object-contain" />
+                </div>
+              ) : (
+                <div className="w-16 h-16 rounded-xl bg-amber-500/20 shrink-0 flex items-center justify-center">
+                  <Trophy className="w-8 h-8 text-amber-400" />
+                </div>
+              )}
+              <div className="flex flex-col">
+                <span className="text-[9px] font-black text-amber-400 uppercase tracking-widest leading-none mb-1">
+                  OFERECIMENTO
+                </span>
+                <span className="text-sm font-black text-white uppercase tracking-wider leading-tight">
+                  {config.sponsorName}
+                </span>
+                {config.sponsorPrize && (
+                  <span className="text-xs font-bold text-amber-200 mt-0.5">
+                    PRÊMIO: {config.sponsorPrize}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
-          <div className="flex flex-col items-end bg-[#0f172a]/80 backdrop-blur-md border border-white/10 rounded-xl py-3 px-6 shadow-2xl shrink-0 ml-4">
+          <div className="flex flex-col items-end bg-[#0f172a]/80 backdrop-blur-md border border-white/10 rounded-xl py-3 px-6 shadow-2xl shrink-0">
             <span className="text-sm text-blue-200 font-bold uppercase tracking-widest mb-1">Total de Votos</span>
             <div className="text-4xl font-black text-white font-mono tracking-tighter">
               {totalVotes.toLocaleString('pt-BR')}

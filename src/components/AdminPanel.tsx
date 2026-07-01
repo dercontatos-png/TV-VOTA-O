@@ -56,6 +56,9 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
   const [votingEnabled, setVotingEnabled] = useState(true);
   const [primaryColor, setPrimaryColor] = useState('#2563eb');
   const [bannerUrl, setBannerUrl] = useState('');
+  const [sponsorName, setSponsorName] = useState('Lourival Junior');
+  const [sponsorPrize, setSponsorPrize] = useState('R$ 500');
+  const [sponsorLogoUrl, setSponsorLogoUrl] = useState('');
   const [isSavingConfig, setIsSavingConfig] = useState(false);
   const [configMsg, setConfigMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -126,6 +129,7 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
   const logoCampinenseRef = useRef<HTMLInputElement>(null);
   const logoPrincipalRef = useRef<HTMLInputElement>(null);
   const bannerRef = useRef<HTMLInputElement>(null);
+  const sponsorLogoRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (config) {
@@ -138,6 +142,9 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
       setVotingEnabled(config.votingEnabled !== false);
       setPrimaryColor(config.primaryColor || '#2563eb');
       setBannerUrl(config.bannerUrl || '');
+      setSponsorName(config.sponsorName || 'Lourival Junior');
+      setSponsorPrize(config.sponsorPrize || 'R$ 500');
+      setSponsorLogoUrl(config.sponsorLogoUrl || '');
     }
   }, [config]);
 
@@ -191,7 +198,10 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
         endDate,
         votingEnabled,
         primaryColor,
-        bannerUrl
+        bannerUrl,
+        sponsorName,
+        sponsorPrize,
+        sponsorLogoUrl
       });
       setConfigMsg({ type: 'success', text: 'Configurações da votação salvas com sucesso!' });
       setTimeout(() => setConfigMsg(null), 4000);
@@ -203,7 +213,7 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
     }
   };
 
-  const processTeamLogoFile = (file: File, teamId: 'azuup' | 'campinense' | 'principal') => {
+  const processTeamLogoFile = (file: File, teamId: 'azuup' | 'campinense' | 'principal' | 'sponsor') => {
     if (!file.type.startsWith('image/')) {
       alert('Por favor, selecione apenas arquivos de imagem.');
       return;
@@ -214,8 +224,8 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = teamId === 'principal' ? 400 : 200;
-        const MAX_HEIGHT = teamId === 'principal' ? 150 : 200;
+        const MAX_WIDTH = teamId === 'principal' || teamId === 'sponsor' ? 400 : 200;
+        const MAX_HEIGHT = teamId === 'principal' || teamId === 'sponsor' ? 150 : 200;
         let width = img.width;
         let height = img.height;
 
@@ -238,7 +248,8 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
         const applyLogo = (val: string) => {
           if (teamId === 'azuup') setLogoAzuup(val);
           else if (teamId === 'campinense') setLogoCampinense(val);
-          else setLogoPrincipal(val);
+          else if (teamId === 'principal') setLogoPrincipal(val);
+          else if (teamId === 'sponsor') setSponsorLogoUrl(val);
         };
 
         if (ctx) {
@@ -1178,7 +1189,7 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="flex flex-col items-center">
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Logo Principal</label>
                   <div 
@@ -1216,6 +1227,46 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
                   <input type="file" ref={logoCampinenseRef} className="hidden" accept="image/*" onChange={(e) => {
                     if (e.target.files?.[0]) processTeamLogoFile(e.target.files[0], 'campinense');
                   }} />
+                </div>
+                
+                <div className="flex flex-col items-center">
+                  <label className="block text-xs font-bold text-amber-500 uppercase tracking-wider mb-2">Logo Patrocinador</label>
+                  <div 
+                    onClick={() => sponsorLogoRef.current?.click()}
+                    className="w-full h-24 border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center cursor-pointer hover:border-amber-400 hover:bg-amber-50 overflow-hidden"
+                  >
+                    {sponsorLogoUrl ? <img src={sponsorLogoUrl} className="h-full object-contain p-2" /> : <span className="text-xs text-gray-400 font-bold px-2 text-center">Clique para Mudar</span>}
+                  </div>
+                  <input type="file" ref={sponsorLogoRef} className="hidden" accept="image/*" onChange={(e) => {
+                    if (e.target.files?.[0]) processTeamLogoFile(e.target.files[0], 'sponsor');
+                  }} />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                    Nome do Patrocinador
+                  </label>
+                  <input
+                    type="text"
+                    value={sponsorName}
+                    onChange={(e) => setSponsorName(e.target.value)}
+                    className="w-full px-4 py-2 text-sm rounded-xl border border-gray-200 focus:border-amber-500 focus:outline-hidden text-gray-800"
+                    placeholder="Ex: Lourival Junior"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                    Prêmio do Patrocinador
+                  </label>
+                  <input
+                    type="text"
+                    value={sponsorPrize}
+                    onChange={(e) => setSponsorPrize(e.target.value)}
+                    className="w-full px-4 py-2 text-sm rounded-xl border border-gray-200 focus:border-amber-500 focus:outline-hidden text-gray-800"
+                    placeholder="Ex: R$ 500"
+                  />
                 </div>
               </div>
 

@@ -36,11 +36,7 @@ export default function VotingPanel({
   // We don't need local states for auth modal anymore, 
   // we just use onLogin which pops up Google Auth.
   const handleInitiateVote = (playerId: string) => {
-    if (!voterInfo) {
-      onLogin(); // Trigger Google Login if not logged in
-    } else {
-      onVote(playerId);
-    }
+    onVote(playerId);
   };
 
   // 1. Calculate and update countdown to midnight in Bahia Time (UTC-3)
@@ -205,10 +201,8 @@ export default function VotingPanel({
         <div className="relative z-10 w-full max-w-4xl mx-auto mt-6 text-center px-4">
           <div className="relative p-6 md:p-8 bg-gradient-to-b from-white/10 to-white/5 backdrop-blur-xl border border-white/10 rounded-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.3)]">
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-transparent via-blue-400 to-transparent opacity-50"></div>
-            <h2 className="text-lg md:text-2xl lg:text-3xl font-display font-medium tracking-wide text-white leading-relaxed drop-shadow-lg" id="question-text">
-              <span className="text-blue-400 text-4xl leading-none inline-block align-top mr-2 opacity-60">"</span>
+            <h2 className="text-base md:text-xl font-display font-medium tracking-wide text-white leading-relaxed drop-shadow-lg max-w-3xl mx-auto" id="question-text">
               {config?.votingQuestion || 'Quem é o melhor "Prata da Casa"?'}
-              <span className="text-blue-400 text-4xl leading-none inline-block align-bottom ml-2 opacity-60">"</span>
             </h2>
           </div>
         </div>
@@ -249,71 +243,37 @@ export default function VotingPanel({
       </div>
 
       {/* Voter Identification Accreditation Card / Status Banner */}
-      <div className="mb-8" id="voter-accreditation-card">
-        {voterInfo ? (
-          <div className="p-5 bg-gradient-to-r from-blue-500/10 via-blue-500/5 to-white border border-blue-500/20 rounded-3xl flex flex-col md:flex-row items-start md:items-center justify-between gap-5 shadow-xs animate-fade-in">
-            <div className="flex items-center gap-4">
-              {voterInfo.photoURL ? (
-                <img src={voterInfo.photoURL} alt="User Profile" referrerPolicy="no-referrer" className="w-12 h-12 rounded-2xl border-2 border-blue-500/20 shadow-sm shrink-0 object-cover" />
-              ) : (
-                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600 shrink-0">
-                  <UserCheck className="w-6 h-6 stroke-[2.5]" />
-                </div>
-              )}
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black text-blue-800 bg-blue-100 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                    Eleitor Logado e Habilitado
-                  </span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
-                </div>
-                <h3 className="text-base font-black text-slate-800 mt-1 font-display">
-                  {voterInfo.name}
-                </h3>
-                <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5">
-                  <Smartphone className="w-3.5 h-3.5 text-slate-400" />
-                  <span>WhatsApp: {voterInfo.phone || voterInfo.email || 'Usuário'}</span>
-                </p>
-              </div>
-            </div>
-            
-            <button
-              onClick={onLogout}
-              className="px-4 py-2 rounded-xl border border-slate-200 hover:border-rose-300 text-slate-500 hover:text-rose-600 bg-white hover:bg-rose-50 text-xs font-black uppercase tracking-wider transition-colors cursor-pointer shrink-0"
-            >
-              Sair da Conta
-            </button>
-          </div>
-        ) : (
-          <div className="p-5 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-white border border-amber-500/20 rounded-3xl flex flex-col md:flex-row items-start md:items-center justify-between gap-5 shadow-xs animate-fade-in">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600 shrink-0">
-                <User className="w-6 h-6 stroke-[2.5]" />
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-black text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                    Identificação Necessária
-                  </span>
-                </div>
-                <h3 className="text-base font-black text-slate-800 mt-1 font-display">
-                  Faça login para habilitar sua votação
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Entre com sua conta Google para validar, auditar e assegurar a autenticidade de seus votos.
-                </p>
-              </div>
-            </div>
-            
-            <button
-              onClick={onLogin}
-              className="px-5 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-900 text-white hover:shadow-md text-xs font-black uppercase tracking-widest transition-all cursor-pointer shrink-0"
-            >
-              Identificar-se agora
-            </button>
-          </div>
-        )}
+      <div className="hidden" id="voter-accreditation-card">
       </div>
+
+      {/* Sponsor Banner */}
+      {config?.sponsorName && (
+        <div className="mb-8 bg-gradient-to-r from-amber-500/10 via-amber-100 to-amber-50 border border-amber-200 rounded-3xl p-6 md:p-8 shadow-sm flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
+          {config.sponsorLogoUrl ? (
+            <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl bg-white border border-amber-200 p-2 shrink-0 flex items-center justify-center shadow-sm overflow-hidden">
+              <img src={config.sponsorLogoUrl} alt={config.sponsorName} className="max-w-full max-h-full object-contain" />
+            </div>
+          ) : (
+            <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl bg-amber-100 border border-amber-200 shrink-0 flex items-center justify-center shadow-sm">
+              <Trophy className="w-10 h-10 text-amber-500" />
+            </div>
+          )}
+          
+          <div>
+            <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 bg-amber-200/50 px-2.5 py-1 rounded-full">
+              Oferecimento Especial
+            </span>
+            <h3 className="text-xl sm:text-2xl font-black text-slate-800 mt-2">
+              {config.sponsorName}
+            </h3>
+            {config.sponsorPrize && (
+              <p className="text-sm sm:text-base text-slate-600 mt-1 font-medium">
+                Prêmio de <strong className="text-amber-600">{config.sponsorPrize}</strong> para o jogador mais votado!
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Recommended Player Invitation Banner */}
       {recommendedPlayer && (

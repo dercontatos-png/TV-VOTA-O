@@ -340,6 +340,29 @@ export default function App() {
   };
 
   useEffect(() => {
+    if (config?.lastResetAt) {
+      const localLastReset = localStorage.getItem('craque_last_reset');
+      if (localLastReset !== config.lastResetAt.toString()) {
+        localStorage.setItem('craque_last_reset', config.lastResetAt.toString());
+        // Clear all craque_voted_ keys
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('craque_voted_')) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+        setCookie('craque_voted_dates', '', -1); // Clear cookie
+        
+        // Reset local state if we had voted
+        setVotedToday(false);
+        setVotedPlayerId(undefined);
+      }
+    }
+  }, [config?.lastResetAt]);
+
+  useEffect(() => {
     loadAppData();
   }, [voterId]);
 
