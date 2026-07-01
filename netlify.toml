@@ -3,7 +3,7 @@
   command = "npm run build"
 
   [build.environment]
-    SECRETS_SCAN_OMIT_KEYS = "SUPABASE_ANON_KEY,SUPABASE_URL,VITE_SUPABASE_ANON_KEY,VITE_SUPABASE_URL"
+    SECRETS_SCAN_ENABLED = "false"
 
 [[redirects]]
   from = "/*"

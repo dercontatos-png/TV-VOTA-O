@@ -1,18 +1,17 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import firebaseConfigJson from '../firebase-applet-config.json';
 
 // Support both Netlify production environment variables and the local JSON config file
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || firebaseConfigJson.apiKey,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfigJson.authDomain,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || firebaseConfigJson.projectId,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfigJson.storageBucket,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfigJson.messagingSenderId,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || firebaseConfigJson.appId,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || firebaseConfigJson.measurementId,
-  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || firebaseConfigJson.firestoreDatabaseId,
+  apiKey: "AIzaSyCbV6fYASjXyHmDxvWuigMDpuDZ4eiywYE",
+  authDomain: "gen-lang-client-0659424330.firebaseapp.com",
+  projectId: "gen-lang-client-0659424330",
+  storageBucket: "gen-lang-client-0659424330.firebasestorage.app",
+  messagingSenderId: "478292464271",
+  appId: "1:478292464271:web:a4e15c2cb6a10e0399d6fa",
+  measurementId: "",
+  firestoreDatabaseId: "ai-studio-votaocraquedocam-5173c2d6-4b3f-4de4-9904-aa0c4d1091ca",
 };
 
 // Initialize Firebase
