@@ -242,7 +242,7 @@ export default function PlayerCard({
               }`}
             >
               <Share2 className="w-4 h-4" />
-              <span>{copied ? 'Link Copiado!' : 'Fazer Campanha / Indicar'}</span>
+              <span>{copied ? 'Link Copiado!' : 'Indicar Jogador'}</span>
             </button>
           </div>
         </div>

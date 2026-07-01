@@ -109,7 +109,7 @@ const ExportNodeTV = ({ config, totalVotes, players }: any) => {
         </div>
 
         {/* Bottom Section: Bars */}
-        <div style={{ display: 'flex', gap: '28px', alignItems: 'flex-end', justifyContent: 'center', height: '580px', paddingBottom: '0' }}>
+        <div style={{ display: 'flex', gap: '28px', alignItems: 'flex-end', justifyContent: 'flex-start', paddingLeft: '0px', marginLeft: '-40px', height: '580px', paddingBottom: '0' }}>
           {[...players].sort((a: any, b: any) => b.votesCount - a.votesCount).slice(0, 10).map((player: any, index: number, arr: any[]) => {
             const topVotes = arr[0]?.votesCount || 1;
             const heightPercentage = Math.max(15, (player.votesCount / topVotes) * 100);
@@ -214,11 +214,18 @@ const ExportNodeFeed = ({ config, totalVotes, players }: any) => {
               <div style={{ width: '2px', height: '30px', backgroundColor: 'rgba(255, 255, 255, 0.5)' }}></div>
               <span style={{ fontSize: '40px', fontWeight: 900, color: '#ffffff', fontFamily: 'monospace' }}>{totalVotes.toLocaleString('pt-BR')}</span>
             </div>
+
+            {config?.sponsorName && (
+               <div style={{ background: 'rgba(0, 51, 102, 0.5)', border: '1px solid rgba(147, 197, 253, 0.3)', borderRadius: '16px', padding: '12px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '20px' }}>
+                 <span style={{ fontSize: '12px', fontWeight: 900, color: '#93c5fd', textTransform: 'uppercase', letterSpacing: '2px' }}>OFERECIMENTO</span>
+                 <span style={{ fontSize: '24px', fontWeight: 900, color: 'white', textTransform: 'uppercase', margin: '4px 0' }}>{config.sponsorName}</span>
+               </div>
+            )}
           </div>
         </div>
 
         {/* Bottom Section: Bars */}
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', justifyContent: 'center', height: '450px', paddingBottom: '0' }}>
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', justifyContent: 'center', height: '400px', paddingBottom: '0' }}>
           {[...players].sort((a: any, b: any) => b.votesCount - a.votesCount).slice(0, 10).map((player: any, index: number, arr: any[]) => {
             const topVotes = arr[0]?.votesCount || 1;
             const heightPercentage = Math.max(15, (player.votesCount / topVotes) * 100);
@@ -246,8 +253,8 @@ const ExportNodeFeed = ({ config, totalVotes, players }: any) => {
 
                 <div style={{ 
                   width: '100%', 
-                  height: `${(heightPercentage / 100) * 280}px`, 
-                  minHeight: '100px',
+                  height: `${(heightPercentage / 100) * 200}px`, 
+                  minHeight: '80px',
                   background: 'rgba(255, 255, 255, 0.1)', 
                   borderRadius: '40px 40px 0 0',
                   border: '2px solid #ffffff',
@@ -433,6 +440,7 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
   const [selectedPlayerLink, setSelectedPlayerLink] = useState('');
   const [generatedLink, setGeneratedLink] = useState(window.location.origin + '?vote=true');
   const [linkCopied, setLinkCopied] = useState(false);
+  const [showResetConfirmModal, setShowResetConfirmModal] = useState(false);
 
   // Drag and Drop ordering state removed
   const handleCopyGeneratedLink = () => {
@@ -828,16 +836,15 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
     }
   };
 
-  const handleResetVotes = async () => {
-    if (confirm("ATENÇÃO: Isso irá zerar TODOS os votos de forma irreversível!\nTem certeza que deseja continuar?")) {
-      try {
-        await resetAllVotes();
-        setOperationMsg({ type: 'success', text: 'A votação foi zerada com sucesso!' });
-        onRefresh();
-      } catch (err) {
-        console.error(err);
-        setOperationMsg({ type: 'error', text: 'Erro ao zerar os votos.' });
-      }
+  const executeResetVotes = async () => {
+    try {
+      await resetAllVotes();
+      setOperationMsg({ type: 'success', text: 'A votação foi zerada com sucesso!' });
+      setShowResetConfirmModal(false);
+      onRefresh();
+    } catch (err) {
+      console.error(err);
+      setOperationMsg({ type: 'error', text: 'Erro ao zerar os votos.' });
     }
   };
 
@@ -1249,7 +1256,7 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
           </div>
           <button
             id="reset-votes-btn"
-            onClick={handleResetVotes}
+            onClick={() => setShowResetConfirmModal(true)}
             className="flex items-center justify-center gap-1.5 text-xs font-black uppercase tracking-wider text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-100 hover:border-rose-600 px-4 py-2.5 rounded-2xl transition-all mt-3 cursor-pointer w-full text-center"
           >
             <RefreshCw className="w-3.5 h-3.5" />
@@ -1343,7 +1350,7 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
             <thead>
               <tr className="border-b border-gray-100 text-[10px] font-bold text-gray-400 uppercase tracking-wider pb-2">
                 <th className="py-2">Data/Hora</th>
-                <th className="py-2">Eleitor (Google Auth & Identificadores)</th>
+                <th className="py-2">Eleitor / Identificador</th>
                 <th className="py-2">Jogador Votado</th>
               </tr>
             </thead>
@@ -1909,6 +1916,39 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
           </div>
         </div>
       </div>
+
+      {/* Reset Confirmation Modal */}
+      {showResetConfirmModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50 p-4 print:hidden" id="reset-confirm-modal">
+          <div className="bg-white rounded-[32px] p-6 md:p-8 max-w-sm w-full shadow-2xl relative border border-slate-100 text-center animate-scale-up">
+            <div className="w-16 h-16 bg-rose-50 border border-rose-100 rounded-full flex items-center justify-center mx-auto mb-4.5 text-rose-600 shadow-lg shadow-rose-500/5">
+              <ShieldAlert className="w-8 h-8 stroke-[2.2]" />
+            </div>
+
+            <h3 className="text-xl font-display font-black text-slate-950 tracking-tight">Atenção!</h3>
+            
+            <p className="text-sm text-slate-500 mt-3 leading-relaxed font-medium">
+              Isso irá zerar <strong>TODOS</strong> os votos de forma irreversível. Todo o histórico será perdido.
+            </p>
+
+            <div className="flex flex-col gap-3 mt-6">
+              <button
+                onClick={executeResetVotes}
+                className="w-full py-3.5 px-4 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-sm tracking-wide shadow-md hover:shadow-lg transition-all cursor-pointer"
+              >
+                Sim, quero zerar tudo
+              </button>
+              
+              <button
+                onClick={() => setShowResetConfirmModal(false)}
+                className="w-full py-3.5 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-sm tracking-wide transition-all cursor-pointer"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hidden Export Nodes for high-quality Images */}
       <ExportNodeTV config={config} totalVotes={totalVotes} players={players} />

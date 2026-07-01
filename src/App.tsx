@@ -524,11 +524,11 @@ export default function App() {
           {/* Main Branding Header with TV Logo if set */}
           <div className="mb-6 flex flex-col items-center text-center px-4">
             {config?.logoPrincipal ? (
-              <div className="bg-black/15 backdrop-blur-xs p-3.5 rounded-2xl border border-white/10 shadow-sm mb-4 transition-all hover:scale-105 flex items-center justify-center select-none">
+              <div className="mb-6 transition-all hover:scale-105 flex items-center justify-center select-none drop-shadow-xl">
                 <img 
                   src={config.logoPrincipal} 
                   alt="TV Logo" 
-                  className="max-h-16 max-w-[200px] object-contain" 
+                  className="max-h-32 max-w-[280px] md:max-h-40 md:max-w-[360px] object-contain" 
                   referrerPolicy="no-referrer"
                 />
               </div>
@@ -691,14 +691,14 @@ export default function App() {
               <UserCheck className="w-8 h-8 stroke-[2.5]" />
             </div>
 
-            <h3 className="text-xl font-display font-black text-slate-950 tracking-tight">Voto Confirmado!</h3>
+            <h3 className="text-2xl font-display font-black text-slate-950 tracking-tight text-balance">Voto Confirmado!</h3>
             
-            <p className="text-sm text-slate-600 mt-3 leading-relaxed">
+            <p className="text-sm md:text-base text-slate-600 mt-4 leading-relaxed text-balance">
               Seu voto foi registrado com sucesso para o craque <strong className="text-emerald-600 font-extrabold">{votedPlayerName}</strong> na disputa pelo Melhor Prata da Casa.
             </p>
 
-            <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl mt-5.5 text-xs text-slate-600 font-bold flex items-center gap-2.5 justify-center">
-              <Calendar className="w-4 h-4 text-emerald-600 shrink-0" />
+            <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl mt-6 text-xs text-slate-600 font-bold flex items-center gap-2.5 justify-center text-balance leading-normal">
+              <Calendar className="w-5 h-5 text-emerald-600 shrink-0" />
               <span>Obrigado! Retorne amanhã para um novo voto.</span>
             </div>
 
