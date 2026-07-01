@@ -248,7 +248,7 @@ export async function getSystemConfig(): Promise<SystemConfig> {
     }
     return { ...DEFAULT_CONFIG, ...config };
   } catch (error) {
-    console.error("Failed to fetch settings from API:", error);
+    console.error("Error fetching settings from Supabase:", error);
     return DEFAULT_CONFIG;
   }
 }
@@ -264,7 +264,7 @@ export async function updateSystemConfig(config: SystemConfig): Promise<void> {
       }
     }
   } catch (err) {
-    console.error("Failed to update system config in API:", err);
+    console.error("Failed to update system config in Supabase:", err);
     throw new Error('Failed to update config');
   }
 }

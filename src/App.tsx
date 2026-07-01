@@ -267,14 +267,14 @@ export default function App() {
         setConfig(configData);
         setErrorMsg(null);
       } catch (err: any) {
-        console.error("Error fetching data from API:", err);
+        console.error("Error fetching data from Supabase:", err);
         setErrorMsg("Erro ao carregar dados. Verifique sua conexão.");
       } finally {
         if (showLoading) setLoading(false);
       }
     };
 
-    // Poll players and system configuration from our server API (cached on server-side)
+    // Poll players and system configuration from Supabase
   useEffect(() => {
     let intervalId: any;
 
