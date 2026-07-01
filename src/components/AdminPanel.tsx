@@ -2,11 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Plus, Edit2, Trash2, KeyRound, LogOut, RefreshCw, 
   Upload, Shield, FileImage, ClipboardList, Info, HelpCircle, Eye, Download,
-  Link, Copy, Check, Monitor, ExternalLink, ArrowUp, ArrowDown
+  Link, Copy, Check, Monitor, ExternalLink, ArrowUp, ArrowDown, Image as ImageIcon
 } from 'lucide-react';
 import { Player, SystemConfig, Vote } from '../types';
-import { addPlayer, updatePlayer, deletePlayer, resetAllVotes, getVotesHistory, getAllVotes } from '../dbService';
+import { addPlayer, updatePlayer, deletePlayer, resetAllVotes, getVotesHistory, getAllVotes, DEFAULT_CONFIG } from '../dbService';
+import { MuralPanel } from './MuralPanel';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import * as htmlToImage from 'html-to-image';
 
 const PRESET_PLAYERS = [
   { name: 'Jefinho', team: 'Azuup', position: 'Meia (MEI)' },
@@ -40,6 +42,7 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
   const [imagePosition, setImagePosition] = useState<'top'|'center'|'bottom'>('top');
   const [order, setOrder] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [operationMsg, setOperationMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // File Upload states
@@ -728,37 +731,67 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
             
             <div className="pt-4 border-t border-slate-800 mt-2">
               <label className="block text-[10px] font-black uppercase tracking-wider text-amber-400 mb-1.5 flex items-center gap-1.5">
-                <Monitor className="w-3.5 h-3.5" /> Link do Mural (vMix / OBS)
+                <ImageIcon className="w-3.5 h-3.5" /> Exportar Ranking 16:9
               </label>
               <div className="flex gap-2">
-                <input
-                  type="text"
-                  readOnly
-                  value={`${window.location.origin}${window.location.pathname}?mural=true`}
-                  className="bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 font-mono flex-grow focus:outline-hidden opacity-80"
-                />
                 <button
                   type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?mural=true`);
-                    alert("Link do Mural copiado!");
+                  disabled={isExporting}
+                  onClick={async () => {
+                    const node = document.getElementById('export-mural-node');
+                    if (node) {
+                      setIsExporting(true);
+                      // Save old styles
+                      const originalDisplay = node.style.display;
+                      const originalTop = node.style.top;
+                      const originalLeft = node.style.left;
+                      const originalPosition = node.style.position;
+                      const originalOpacity = node.style.opacity;
+                      const originalZIndex = node.style.zIndex;
+
+                      // Only need to ensure it's fully opaque if we were hiding it, but it's already block at -10000px
+                      node.style.opacity = '1';
+
+                      try {
+                        // Allow a small delay for images to fully load if any changed recently
+                        await new Promise(r => setTimeout(r, 1000));
+                        const dataUrl = await htmlToImage.toPng(node, { pixelRatio: 2, width: 1920, height: 1080 });
+                        const link = document.createElement('a');
+                        link.download = 'ranking-craque.png';
+                        link.href = dataUrl;
+                        link.click();
+                      } catch (err) {
+                        console.error('Failed to export image', err);
+                        alert('Erro ao exportar a imagem. Tente novamente.');
+                      } finally {
+                        // Restore old styles
+                        node.style.display = originalDisplay;
+                        node.style.top = originalTop;
+                        node.style.left = originalLeft;
+                        node.style.position = originalPosition;
+                        node.style.opacity = originalOpacity;
+                        node.style.zIndex = originalZIndex;
+                        setIsExporting(false);
+                      }
+                    }
                   }}
-                  className="bg-slate-800 hover:bg-slate-700 text-white p-2.5 rounded-xl transition-colors cursor-pointer shrink-0"
-                  title="Copiar Link do Mural"
+                  className={`text-white px-4 py-2.5 rounded-xl transition-colors cursor-pointer shadow-sm text-xs font-bold w-full flex items-center justify-center gap-2 ${isExporting ? 'bg-slate-600 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500'}`}
                 >
-                  <Copy className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => window.open(`${window.location.origin}${window.location.pathname}?mural=true`, '_blank')}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white p-2.5 rounded-xl transition-colors cursor-pointer shrink-0 shadow-sm"
-                  title="Abrir Mural em nova aba"
-                >
-                  <ExternalLink className="w-4 h-4" />
+                  {isExporting ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Gerando PNG... Aguarde
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4" />
+                      Baixar Imagem em Alta Qualidade (PNG 16:9)
+                    </>
+                  )}
                 </button>
               </div>
               <p className="text-[10px] text-slate-400 text-left mt-2 leading-relaxed">
-                Este link exibe os resultados em tempo real, tela cheia com fundo limpo. Use como <strong>Browser Source</strong> na transmissão ao vivo.
+                Gere uma imagem (JPEG) do ranking atual, tamanho 1920x1080, para usar como mídia no vMix ou OBS.
               </p>
             </div>
           </div>
@@ -1290,6 +1323,16 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
                   >
                     {bannerUrl ? "✓ Banner Carregado" : "Upload Imagem"}
                   </div>
+                  {bannerUrl && (
+                    <button 
+                      type="button"
+                      onClick={() => setBannerUrl('')} 
+                      className="h-10 px-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 text-xs font-bold transition-colors"
+                      title="Remover Banner"
+                    >
+                      Remover
+                    </button>
+                  )}
                   <input type="file" ref={bannerRef} className="hidden" accept="image/*" onChange={(e) => {
                     if (e.target.files?.[0]) processBannerFile(e.target.files[0]);
                   }} />
@@ -1417,6 +1460,130 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
               </table>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Hidden Export Node for high-quality 16:9 Image */}
+      <div 
+        id="export-mural-node" 
+        style={{ 
+          display: 'block', 
+          width: '1920px', 
+          height: '1080px', 
+          backgroundColor: 'transparent', 
+          position: 'fixed', 
+          top: '-10000px',
+          left: '-10000px',
+          pointerEvents: 'none',
+          zIndex: -9999,
+          padding: '0',
+          boxSizing: 'border-box',
+          fontFamily: 'Inter, sans-serif'
+        }}
+      >
+        {/* Content Wrapper */}
+        <div style={{ position: 'relative', zIndex: 10, width: '100%', height: '100%', padding: '60px 80px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          
+          {/* Top Section */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
+            {/* Left side: Teams */}
+            <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+              {config?.logoAzuup && (
+                <img crossOrigin="anonymous" src={config.logoAzuup} style={{ height: '140px', objectFit: 'contain' }} />
+              )}
+              {config?.logoAzuup && config?.logoCampinense && (
+                <span style={{ fontSize: '48px', fontWeight: 900, color: 'white', opacity: 0.8 }}>X</span>
+              )}
+              {config?.logoCampinense && (
+                <img crossOrigin="anonymous" src={config.logoCampinense} style={{ height: '140px', objectFit: 'contain' }} />
+              )}
+            </div>
+
+            {/* Center: Title */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '-20px' }}>
+              <h1 style={{ fontSize: '64px', fontWeight: 900, color: 'white', textTransform: 'uppercase', margin: 0, letterSpacing: '4px', textShadow: '0 4px 10px rgba(0,0,0,0.8)' }}>
+                RESULTADO DA
+              </h1>
+              <h1 style={{ fontSize: '110px', fontWeight: 900, color: 'white', textTransform: 'uppercase', margin: '-20px 0 20px 0', letterSpacing: '2px', textShadow: '0 4px 15px rgba(0,0,0,0.8)' }}>
+                VOTAÇÃO
+              </h1>
+              <div style={{ background: 'rgba(2, 6, 23, 0.9)', border: '2px solid rgba(96, 165, 250, 0.8)', borderRadius: '16px', padding: '16px 40px', display: 'flex', alignItems: 'center', gap: '24px', backdropFilter: 'blur(10px)', boxShadow: '0 8px 30px rgba(0,0,0,0.5)' }}>
+                <span style={{ fontSize: '24px', color: 'white', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '2px' }}>TOTAL DE VOTOS</span>
+                <div style={{ width: '2px', height: '40px', backgroundColor: 'rgba(96, 165, 250, 0.5)' }}></div>
+                <span style={{ fontSize: '48px', fontWeight: 900, color: '#93c5fd', fontFamily: 'monospace' }}>{totalVotes.toLocaleString('pt-BR')}</span>
+              </div>
+            </div>
+
+            {/* Right side: Sponsor */}
+            <div style={{ minWidth: '350px' }}>
+              {config?.sponsorName && (
+                <div style={{ background: 'rgba(2, 6, 23, 0.9)', border: '2px solid rgba(96, 165, 250, 0.8)', borderRadius: '24px', padding: '32px 48px', display: 'flex', alignItems: 'center', gap: '32px', backdropFilter: 'blur(10px)', boxShadow: '0 8px 30px rgba(0,0,0,0.5)' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', width: '100%' }}>
+                    <span style={{ fontSize: '20px', fontWeight: 900, color: '#93c5fd', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '2px' }}>OFERECIMENTO</span>
+                    <span style={{ fontSize: '42px', fontWeight: 900, color: 'white', textTransform: 'uppercase' }}>{config.sponsorName}</span>
+                    {config.sponsorPrize && (
+                      <span style={{ fontSize: '28px', fontWeight: 700, color: 'white', marginTop: '8px' }}>PRÊMIO: {config.sponsorPrize}</span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Bottom Section: Bars */}
+          <div style={{ display: 'flex', gap: '48px', alignItems: 'flex-end', justifyContent: 'center', height: '580px', paddingBottom: '0' }}>
+            {[...players].sort((a, b) => b.votesCount - a.votesCount).slice(0, 7).map((player, index, arr) => {
+              const topVotes = arr[0]?.votesCount || 1;
+              const heightPercentage = Math.max(15, (player.votesCount / topVotes) * 100);
+              
+              return (
+                <div key={index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '160px', flexShrink: 0, justifyContent: 'flex-end', height: '100%' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '16px' }}>
+                    <span style={{ fontSize: '48px', fontWeight: 900, color: 'white', textShadow: '0 4px 15px rgba(0,0,0,0.8)' }}>
+                      {player.votesCount}
+                    </span>
+                    <span style={{ fontSize: '24px', color: '#93c5fd', fontWeight: 800, textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
+                      {totalVotes > 0 ? ((player.votesCount / totalVotes) * 100).toFixed(1) : 0}%
+                    </span>
+                  </div>
+                  
+                  <div style={{ zIndex: 20, marginBottom: '-70px' }}>
+                    {player.imageUrl ? (
+                      <img crossOrigin="anonymous" src={player.imageUrl} style={{ width: '140px', height: '140px', borderRadius: '50%', objectFit: 'cover', border: '4px solid #60a5fa', backgroundColor: '#0f172a', boxShadow: '0 8px 25px rgba(0,0,0,0.8)' }} />
+                    ) : (
+                      <div style={{ width: '140px', height: '140px', borderRadius: '50%', backgroundColor: '#0f172a', border: '4px solid #60a5fa', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px', fontWeight: 900, color: 'white', boxShadow: '0 8px 25px rgba(0,0,0,0.8)' }}>
+                        {player.name.substring(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ 
+                    width: '100%', 
+                    height: `${(heightPercentage / 100) * 350}px`, 
+                    minHeight: '120px',
+                    background: 'rgba(2, 6, 23, 0.9)', 
+                    borderRadius: '24px 24px 0 0',
+                    border: '3px solid #60a5fa',
+                    borderBottom: 'none',
+                    boxShadow: '0 -8px 30px rgba(0,0,0,0.6)',
+                    zIndex: 10,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'flex-end',
+                    paddingBottom: '24px'
+                  }}>
+                    <div style={{ textAlign: 'center', width: '100%', padding: '0 10px' }}>
+                      <div style={{ fontSize: '20px', fontWeight: 900, color: 'white', textTransform: 'uppercase', wordBreak: 'break-word', lineHeight: 1.1 }}>
+                        {player.name}
+                      </div>
+                      {player.position && <div style={{ fontSize: '14px', fontWeight: 800, color: '#bfdbfe', textTransform: 'uppercase', marginTop: '8px' }}>{player.position}</div>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
         </div>
       </div>
     </div>

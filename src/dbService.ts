@@ -307,25 +307,21 @@ export async function resetAllVotes(): Promise<void> {
     let batch = writeBatch(db);
     let operationCount = 0;
     
-    // Reset players votesCount to 0
+    // Reset players votesCount to 0 and fix missing fields
     for (const playerDoc of playersSnapshot.docs) {
-      batch.update(playerDoc.ref, { votesCount: 0 });
+      const pData = playerDoc.data();
+      const updates: any = { votesCount: 0 };
+      
+      // Inject missing fields that security rules require
+      if (typeof pData.createdAt !== 'number') updates.createdAt = Date.now();
+      if (typeof pData.position !== 'string') updates.position = '';
+      if (typeof pData.imageUrl !== 'string') updates.imageUrl = '';
+      if (typeof pData.name !== 'string' || pData.name === '') updates.name = 'Desconhecido';
+      if (typeof pData.team !== 'string' || pData.team === '') updates.team = 'Desconhecido';
+      
+      batch.update(playerDoc.ref, updates);
       operationCount++;
-      if (operationCount >= 450) {
-        await batch.commit();
-        batch = writeBatch(db);
-        operationCount = 0;
-      }
-    }
-    
-    // Delete all votes (fetch all and delete)
-    const votesCol = collection(db, 'votes');
-    const votesSnapshot = await getDocs(votesCol);
-    
-    for (const voteDoc of votesSnapshot.docs) {
-      batch.delete(voteDoc.ref);
-      operationCount++;
-      if (operationCount >= 450) {
+      if (operationCount >= 400) {
         await batch.commit();
         batch = writeBatch(db);
         operationCount = 0;
@@ -334,12 +330,38 @@ export async function resetAllVotes(): Promise<void> {
     
     if (operationCount > 0) {
       await batch.commit();
+      batch = writeBatch(db);
+      operationCount = 0;
+    }
+    
+    // 2. Delete all votes (fetch in chunks and delete)
+    const votesCol = collection(db, 'votes');
+    let hasMoreVotes = true;
+    
+    while (hasMoreVotes) {
+      const votesQuery = query(votesCol, limit(400));
+      const votesSnapshot = await getDocs(votesQuery);
+      
+      if (votesSnapshot.empty) {
+        hasMoreVotes = false;
+        break;
+      }
+      
+      for (const voteDoc of votesSnapshot.docs) {
+        batch.delete(voteDoc.ref);
+        operationCount++;
+      }
+      
+      await batch.commit();
+      batch = writeBatch(db);
+      operationCount = 0;
     }
     
     // Update system config to force clients to clear local storage
     const configRef = doc(db, 'settings', 'voting');
-    await updateDoc(configRef, { lastResetAt: Date.now() });
+    await setDoc(configRef, { lastResetAt: Date.now() }, { merge: true });
   } catch (error) {
+    console.error("Error in resetAllVotes:", error);
     handleFirestoreError(error, OperationType.WRITE, 'batch_reset_all');
   }
 }

@@ -6,12 +6,25 @@ import { collection, onSnapshot, query, orderBy, doc } from 'firebase/firestore'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Cell, Tooltip } from 'recharts';
 import { Trophy, Users } from 'lucide-react';
 
-export function MuralPanel() {
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [config, setConfig] = useState<SystemConfig>(DEFAULT_CONFIG);
-  const [totalVotes, setTotalVotes] = useState(0);
+interface MuralPanelProps {
+  staticPlayers?: Player[];
+  staticConfig?: SystemConfig;
+}
+
+export function MuralPanel({ staticPlayers, staticConfig }: MuralPanelProps = {}) {
+  const [players, setPlayers] = useState<Player[]>(staticPlayers || []);
+  const [config, setConfig] = useState<SystemConfig>(staticConfig || DEFAULT_CONFIG);
+  const [totalVotes, setTotalVotes] = useState(staticPlayers ? staticPlayers.reduce((sum, p) => sum + p.votesCount, 0) : 0);
 
   useEffect(() => {
+    // If static data is provided, skip Firestore listeners
+    if (staticPlayers && staticConfig) {
+      setPlayers(staticPlayers);
+      setConfig(staticConfig);
+      setTotalVotes(staticPlayers.reduce((sum, p) => sum + p.votesCount, 0));
+      return;
+    }
+
     // Real-time listener for players
     const playersRef = collection(db, 'players');
     const q = query(playersRef, orderBy('votesCount', 'desc'), orderBy('name', 'asc'));
@@ -73,7 +86,7 @@ export function MuralPanel() {
           <div className="flex flex-col items-center justify-start h-full">
             {player?.imageUrl ? (
               <div className="w-16 h-16 rounded-full overflow-hidden mb-2 border-[2px] border-white shadow-lg bg-slate-100 shrink-0">
-                 <img src={player.imageUrl} className="w-full h-full object-cover" alt={player.name} referrerPolicy="no-referrer" />
+                 <img crossOrigin="anonymous" src={player.imageUrl} className="w-full h-full object-cover" alt={player.name} referrerPolicy="no-referrer" />
               </div>
             ) : (
               <div className="w-16 h-16 rounded-full bg-slate-100 border-[2px] border-white mb-2 flex items-center justify-center text-[#003f7a] text-2xl font-black shadow-lg shrink-0">
@@ -100,7 +113,7 @@ export function MuralPanel() {
   };
 
   return (
-    <div className="min-h-screen bg-[#001730] flex flex-col font-sans text-slate-100 relative overflow-hidden">
+    <div className="w-full h-full min-h-screen bg-[#001730] flex flex-col font-sans text-slate-100 relative overflow-hidden">
       
       {/* Background Graphic Elements */}
       <div className="absolute top-0 left-0 w-full h-full opacity-30 pointer-events-none">
@@ -109,7 +122,7 @@ export function MuralPanel() {
       </div>
       <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-400 via-white to-blue-400"></div>
 
-      <div className="flex flex-col h-screen p-6 md:p-8 relative z-10">
+      <div className="flex flex-col h-full p-6 md:p-8 relative z-10">
         
         {/* Header */}
         <header className="flex justify-between items-start mb-8 gap-4">
@@ -121,15 +134,6 @@ export function MuralPanel() {
           
           {config?.sponsorName && (
             <div className="bg-amber-900/40 backdrop-blur-md border border-amber-500/30 rounded-xl p-3 shadow-2xl flex items-center gap-4 shrink-0 max-w-sm">
-              {config.sponsorLogoUrl ? (
-                <div className="w-16 h-16 rounded-xl bg-white p-1.5 shrink-0 flex items-center justify-center">
-                  <img src={config.sponsorLogoUrl} alt={config.sponsorName} className="max-w-full max-h-full object-contain" />
-                </div>
-              ) : (
-                <div className="w-16 h-16 rounded-xl bg-amber-500/20 shrink-0 flex items-center justify-center">
-                  <Trophy className="w-8 h-8 text-amber-400" />
-                </div>
-              )}
               <div className="flex flex-col">
                 <span className="text-[9px] font-black text-amber-400 uppercase tracking-widest leading-none mb-1">
                   OFERECIMENTO
@@ -212,7 +216,7 @@ export function MuralPanel() {
                   fill="url(#colorVotes)" 
                   radius={[12, 12, 0, 0]}
                   maxBarSize={90}
-                  isAnimationActive={true}
+                  isAnimationActive={!staticPlayers}
                   animationDuration={1000}
                   label={(props: any) => {
                     const { x, y, width, value } = props;
