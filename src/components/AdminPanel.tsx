@@ -1323,6 +1323,7 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
                       key={player.id} 
                       draggable 
                       onDragStart={(e) => handlePlayerDragStart(e, index)}
+                      onDragEnter={(e) => e.preventDefault()}
                       onDragOver={(e) => handlePlayerDragOver(e, index)}
                       onDrop={(e) => handlePlayerDrop(e, index)}
                       className={`transition-colors cursor-move ${draggedPlayerIndex === index ? 'opacity-50 bg-gray-100' : 'hover:bg-gray-50/50'}`}

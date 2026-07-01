@@ -282,12 +282,7 @@ export default function App() {
             ...doc.data()
           } as Player));
           
-          const sortedPlayers = [...playersData].sort((a, b) => {
-            if (b.votesCount !== a.votesCount) {
-              return b.votesCount - a.votesCount;
-            }
-            return (a.order || 0) - (b.order || 0);
-          });
+          const sortedPlayers = [...playersData].sort((a, b) => (a.order || 0) - (b.order || 0));
           setPlayers(sortedPlayers);
           setLoading(false);
         });

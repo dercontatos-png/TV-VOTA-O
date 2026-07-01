@@ -65,22 +65,22 @@ export function MuralPanel() {
     
     return (
       <g transform={`translate(${x},${y})`}>
-        <foreignObject x={-60} y={15} width={120} height={150}>
+        <foreignObject x={-75} y={15} width={150} height={200}>
           <div className="flex flex-col items-center justify-start h-full">
             {player?.imageUrl ? (
-              <div className="w-20 h-20 rounded-full overflow-hidden mb-3 border-4 border-slate-700/50 shadow-[0_0_20px_rgba(0,0,0,0.6)] bg-slate-800">
+              <div className="w-28 h-28 rounded-full overflow-hidden mb-4 border-4 border-slate-700/50 shadow-[0_0_20px_rgba(0,0,0,0.6)] bg-slate-800">
                  <img src={player.imageUrl} className="w-full h-full object-cover" alt={player.name} referrerPolicy="no-referrer" />
               </div>
             ) : (
-              <div className="w-20 h-20 rounded-full bg-slate-800 border-4 border-slate-700/50 mb-3 flex items-center justify-center text-slate-400 text-2xl font-black shadow-[0_0_20px_rgba(0,0,0,0.6)]">
+              <div className="w-28 h-28 rounded-full bg-slate-800 border-4 border-slate-700/50 mb-4 flex items-center justify-center text-slate-400 text-3xl font-black shadow-[0_0_20px_rgba(0,0,0,0.6)]">
                 {payload.value.substring(0, 2).toUpperCase()}
               </div>
             )}
-            <span className="text-lg font-black text-white text-center uppercase tracking-wider leading-tight w-full truncate px-1 drop-shadow-md">
+            <span className="text-xl font-black text-white text-center uppercase tracking-wider leading-tight w-full truncate px-1 drop-shadow-md">
               {payload.value}
             </span>
             {player?.team && (
-              <span className="text-xs text-emerald-400 font-black uppercase tracking-widest truncate w-full text-center mt-1 drop-shadow-md">
+              <span className="text-sm text-emerald-400 font-black uppercase tracking-widest truncate w-full text-center mt-1.5 drop-shadow-md">
                 {player.team}
               </span>
             )}
@@ -100,23 +100,11 @@ export function MuralPanel() {
       <div className="flex flex-col h-screen p-6 md:p-10 relative z-10">
         
         {/* Header - Simplified as requested */}
-        <header className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-6">
-            {config.logoPrincipal ? (
-              <img src={config.logoPrincipal} alt="Logo" className="h-20 object-contain filter drop-shadow-[0_0_15px_rgba(255,255,255,0.15)]" />
-            ) : (
-              <div className="w-20 h-20 bg-emerald-500/10 border border-emerald-500/20 rounded-3xl flex items-center justify-center text-emerald-400">
-                <Trophy className="w-10 h-10" />
-              </div>
-            )}
-          </div>
-
-          <div className="flex gap-6 items-center">
-            <div className="flex flex-col items-end">
-              <span className="text-lg text-emerald-400/80 uppercase tracking-widest font-black mb-1">Total de Votos</span>
-              <div className="text-6xl font-black text-white font-mono tracking-tighter drop-shadow-xl">
-                {totalVotes.toLocaleString('pt-BR')}
-              </div>
+        <header className="flex justify-end items-center mb-6">
+          <div className="flex flex-col items-end">
+            <span className="text-2xl text-emerald-400/80 uppercase tracking-widest font-black mb-1">Total de Votos</span>
+            <div className="text-7xl font-black text-white font-mono tracking-tighter drop-shadow-xl">
+              {totalVotes.toLocaleString('pt-BR')}
             </div>
           </div>
         </header>
@@ -126,14 +114,14 @@ export function MuralPanel() {
           
           {totalVotes === 0 ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500">
-              <Users className="w-24 h-24 mb-6 opacity-20" />
-              <p className="text-3xl font-black uppercase tracking-widest opacity-50">Aguardando Votos</p>
+              <Users className="w-32 h-32 mb-6 opacity-20" />
+              <p className="text-4xl font-black uppercase tracking-widest opacity-50">Aguardando Votos</p>
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}
-                margin={{ top: 60, right: 30, left: 20, bottom: 130 }}
+                margin={{ top: 80, right: 30, left: 20, bottom: 180 }}
               >
                 <defs>
                   <linearGradient id="colorVotes" x1="0" y1="0" x2="0" y2="1">
@@ -162,7 +150,7 @@ export function MuralPanel() {
                 <YAxis 
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: '#94a3b8', fontSize: 18, fontWeight: 700 }}
+                  tick={{ fill: '#94a3b8', fontSize: 24, fontWeight: 700 }}
                   dx={-20}
                   allowDecimals={false}
                 />
@@ -170,14 +158,14 @@ export function MuralPanel() {
                 <Tooltip
                   cursor={{ fill: 'rgba(255,255,255,0.03)' }}
                   contentStyle={{ backgroundColor: 'rgba(15,23,42,0.95)', borderColor: 'rgba(255,255,255,0.15)', borderRadius: '16px', color: '#fff', backdropFilter: 'blur(12px)' }}
-                  itemStyle={{ color: '#34d399', fontWeight: '900', fontSize: '20px' }}
+                  itemStyle={{ color: '#34d399', fontWeight: '900', fontSize: '24px' }}
                 />
 
                 <Bar 
                   dataKey="votes" 
                   fill="url(#colorVotes)" 
-                  radius={[12, 12, 0, 0]}
-                  barSize={100}
+                  radius={[16, 16, 0, 0]}
+                  barSize={120}
                   isAnimationActive={true}
                   animationDuration={1000}
                   label={(props: any) => {
@@ -187,11 +175,11 @@ export function MuralPanel() {
                     if (value === 0) return null;
                     
                     return (
-                      <g transform={`translate(${x + width / 2},${y - 20})`}>
-                        <text fill="#ffffff" textAnchor="middle" fontSize={26} fontWeight={900} filter="url(#glow)">
+                      <g transform={`translate(${x + width / 2},${y - 25})`}>
+                        <text fill="#ffffff" textAnchor="middle" fontSize={36} fontWeight={900} filter="url(#glow)">
                           {value}
                         </text>
-                        <text y={22} fill="#a7f3d0" textAnchor="middle" fontSize={16} fontWeight={800}>
+                        <text y={30} fill="#a7f3d0" textAnchor="middle" fontSize={22} fontWeight={800}>
                           {percentage}%
                         </text>
                       </g>
