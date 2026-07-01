@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Loader2, Calendar, UserCheck, ShieldAlert, X } from 'lucide-react';
+import { Loader2, Calendar, UserCheck, ShieldAlert, X, ShieldCheck } from 'lucide-react';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import VotingPanel from './components/VotingPanel';
 import AdminPanel from './components/AdminPanel';
-import { Player, SystemConfig } from './types';
+import { Player, SystemConfig, VoterInfo } from './types';
 import { getPlayers, castVote, hasVotedToday, getBahiaDateStr, getSystemConfig, updateSystemConfig } from './dbService';
+import { auth, googleProvider } from './firebase';
+import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 
 // Helper to generate or fetch unique voter fingerprint
 function getOrCreateVoterId(): string {
@@ -23,10 +25,32 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [isVoting, setIsVoting] = useState(false);
 
+  // Secure Admin Authentication State
+  const [adminUser, setAdminUser] = useState<FirebaseUser | null>(null);
+  const [checkingAdmin, setCheckingAdmin] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  // Voter State (Login do Eleitor)
+  const [voterInfo, setVoterInfo] = useState<VoterInfo | null>(() => {
+    const saved = localStorage.getItem('craque_voter_info');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  });
+
+  // Reactive voterId computation based on identification
+  const voterId = voterInfo 
+    ? `voter_phone_${voterInfo.phone.replace(/\D/g, '')}`
+    : getOrCreateVoterId();
+
   // Voting restriction states
   const [votedToday, setVotedToday] = useState(false);
   const [votedPlayerId, setVotedPlayerId] = useState<string | undefined>(undefined);
-  const [voterId] = useState(getOrCreateVoterId);
   const [recommendedPlayerId, setRecommendedPlayerId] = useState<string | null>(null);
 
   // System Configuration state
@@ -44,6 +68,52 @@ export default function App() {
   // Confirmatory Success Modal State
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [votedPlayerName, setVotedPlayerName] = useState('');
+
+  // Firebase Auth Observer to persist admin session
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user && user.email === 'der.contatos@gmail.com') {
+        setAdminUser(user);
+      } else {
+        setAdminUser(null);
+        setView('voting');
+      }
+      setCheckingAdmin(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Google Sign-In with popup trigger
+  const handleAdminLogin = async () => {
+    try {
+      setAuthError(null);
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      
+      if (user.email === 'der.contatos@gmail.com') {
+        setAdminUser(user);
+        setView('admin');
+      } else {
+        await signOut(auth);
+        setAuthError(`Acesso negado (${user.email}). O Painel Admin é exclusivo para organizadores.`);
+      }
+    } catch (error: any) {
+      console.error("Error signing in with Google:", error);
+      if (error.code !== 'auth/popup-closed-by-user') {
+        setAuthError("Não foi possível autenticar com o Google. Verifique se as permissões de pop-up estão ativas no navegador.");
+      }
+    }
+  };
+
+  const handleAdminLogout = async () => {
+    try {
+      await signOut(auth);
+      setAdminUser(null);
+      setView('voting');
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
 
   // Fetch all players and check if user has voted today
   const loadAppData = async () => {
@@ -72,6 +142,18 @@ export default function App() {
     setConfig(newConfig);
   };
 
+  // Login/Identify Voter
+  const handleIdentifyVoter = (info: VoterInfo) => {
+    localStorage.setItem('craque_voter_info', JSON.stringify(info));
+    setVoterInfo(info);
+  };
+
+  // Logout/Clear Voter
+  const handleLogoutVoter = () => {
+    localStorage.removeItem('craque_voter_info');
+    setVoterInfo(null);
+  };
+
   useEffect(() => {
     loadAppData();
   }, [voterId]);
@@ -86,7 +168,7 @@ export default function App() {
       const playerName = selectedPlayer ? selectedPlayer.name : 'seu jogador preferido';
       
       // Perform transactional vote casting
-      await castVote(playerId, voterId);
+      await castVote(playerId, voterId, voterInfo || undefined);
       
       setVotedPlayerName(playerName);
       setVotedToday(true);
@@ -105,10 +187,19 @@ export default function App() {
     }
   };
 
+  const activeView = (view === 'admin' && adminUser) ? 'admin' : 'voting';
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900 selection:bg-emerald-500 selection:text-white" id="app-root-container">
       {/* 1. Header Navigation */}
-      <Header onNavigate={setView} currentView={view} config={config} />
+      <Header 
+        onNavigate={setView} 
+        currentView={activeView} 
+        config={config} 
+        isAdmin={!!adminUser}
+        adminEmail={adminUser?.email}
+        onAdminLogout={handleAdminLogout}
+      />
 
       {/* 2. Main Content Stage */}
       <main className="flex-grow pb-12">
@@ -117,7 +208,7 @@ export default function App() {
             <Loader2 className="w-12 h-12 text-emerald-600 animate-spin" />
             <p className="text-xs font-extrabold uppercase tracking-widest text-slate-400 mt-4">Carregando dados da votação...</p>
           </div>
-        ) : view === 'voting' ? (
+        ) : activeView === 'voting' ? (
           <VotingPanel
             players={players}
             onVote={handleVote}
@@ -126,6 +217,9 @@ export default function App() {
             isVoting={isVoting}
             recommendedPlayerId={recommendedPlayerId}
             config={config}
+            voterInfo={voterInfo}
+            onIdentifyVoter={handleIdentifyVoter}
+            onLogoutVoter={handleLogoutVoter}
           />
         ) : (
           <AdminPanel 
@@ -138,7 +232,11 @@ export default function App() {
       </main>
 
       {/* 3. Footer Section */}
-      <Footer onNavigate={setView} />
+      <Footer 
+        onNavigate={setView} 
+        isAdmin={!!adminUser}
+        onAdminLogin={handleAdminLogin}
+      />
 
       {/* 4. Elegant Success Confirmation Modal */}
       {showSuccessModal && (
@@ -170,6 +268,43 @@ export default function App() {
             <button
               onClick={() => setShowSuccessModal(false)}
               className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-extrabold text-sm tracking-wide shadow-md shadow-emerald-500/10 hover:shadow-lg transition-all transform hover:-translate-y-0.5 active:translate-y-0 mt-6 cursor-pointer"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 5. Elegant Restricted Access Warning Modal */}
+      {authError && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50 p-4" id="auth-error-modal">
+          <div className="bg-white rounded-[32px] p-6 md:p-8 max-w-sm w-full shadow-2xl relative border border-slate-100 text-center animate-scale-up">
+            <button
+              onClick={() => setAuthError(null)}
+              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-950 bg-slate-50 hover:bg-slate-100 rounded-full transition-colors cursor-pointer border border-slate-100"
+              aria-label="Fechar"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="w-16 h-16 bg-rose-50 border border-rose-100 rounded-full flex items-center justify-center mx-auto mb-4.5 text-rose-600 shadow-lg shadow-rose-500/5">
+              <ShieldAlert className="w-8 h-8 stroke-[2.2]" />
+            </div>
+
+            <h3 className="text-xl font-display font-black text-slate-950 tracking-tight">Acesso Restrito</h3>
+            
+            <p className="text-sm text-slate-500 mt-3 leading-relaxed font-medium">
+              {authError}
+            </p>
+
+            <div className="bg-slate-50 border border-slate-100 p-3.5 rounded-2xl mt-5 text-xs text-slate-600 font-bold flex items-center gap-2 justify-center leading-normal">
+              <ShieldCheck className="w-4.5 h-4.5 text-emerald-600 shrink-0 animate-pulse" />
+              <span>Logado como conta pública de eleitor.</span>
+            </div>
+
+            <button
+              onClick={() => setAuthError(null)}
+              className="w-full py-3.5 px-4 rounded-2xl bg-slate-950 hover:bg-slate-905 text-white font-extrabold text-sm tracking-wide shadow-md hover:shadow-lg transition-all mt-6 cursor-pointer"
             >
               Entendido
             </button>

@@ -185,7 +185,7 @@ export async function hasVotedToday(voterId: string): Promise<{ voted: boolean; 
 }
 
 // 6. Cast a vote using a firestore transaction for reliability and concurrency
-export async function castVote(playerId: string, voterId: string): Promise<void> {
+export async function castVote(playerId: string, voterId: string, voterInfo?: import('./types').VoterInfo): Promise<void> {
   try {
     const dateStr = getBahiaDateStr();
     const playerRef = doc(db, 'players', playerId);
@@ -205,7 +205,9 @@ export async function castVote(playerId: string, voterId: string): Promise<void>
         playerId,
         voterId,
         dateStr,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        voterName: voterInfo?.name || 'Anônimo',
+        voterPhone: voterInfo?.phone || 'Não informado'
       });
       
       // Increment player's vote

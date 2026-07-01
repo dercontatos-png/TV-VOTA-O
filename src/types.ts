@@ -8,12 +8,19 @@ export interface Player {
   createdAt: number;
 }
 
+export interface VoterInfo {
+  name: string;
+  phone: string;
+}
+
 export interface Vote {
   id: string;
   playerId: string;
   voterId: string;
   dateStr: string; // YYYY-MM-DD
   timestamp: number;
+  voterName?: string;
+  voterPhone?: string;
 }
 
 export interface SystemConfig {

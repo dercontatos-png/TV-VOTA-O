@@ -1,13 +1,23 @@
-import { Trophy, Calendar, MapPin } from 'lucide-react';
+import { Trophy, Calendar, MapPin, LogOut, User } from 'lucide-react';
 import { SystemConfig } from '../types';
 
 interface HeaderProps {
   onNavigate: (view: 'voting' | 'admin') => void;
   currentView: 'voting' | 'admin';
   config: SystemConfig | null;
+  isAdmin: boolean;
+  adminEmail?: string | null;
+  onAdminLogout: () => void;
 }
 
-export default function Header({ onNavigate, currentView, config }: HeaderProps) {
+export default function Header({ 
+  onNavigate, 
+  currentView, 
+  config, 
+  isAdmin, 
+  adminEmail,
+  onAdminLogout 
+}: HeaderProps) {
   return (
     <header className="bg-gradient-to-br from-slate-950 via-emerald-950 to-emerald-900 text-white border-b border-emerald-800/20 relative overflow-hidden" id="app-header">
       {/* Decorative soccer grid/field layout lines */}
@@ -35,29 +45,55 @@ export default function Header({ onNavigate, currentView, config }: HeaderProps)
             </div>
           </div>
           
-          <div className="flex items-center gap-2.5 bg-slate-900/60 p-1.5 rounded-2xl border border-white/5 self-start md:self-auto" id="header-navigation-controls">
-            <button
-              id="nav-vote-btn"
-              onClick={() => onNavigate('voting')}
-              className={`px-5 py-2.5 text-xs font-extrabold uppercase tracking-wider rounded-xl transition-all duration-300 cursor-pointer ${
-                currentView === 'voting'
-                  ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-md shadow-emerald-500/20 scale-100'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              Votação Pública
-            </button>
-            <button
-              id="nav-admin-btn"
-              onClick={() => onNavigate('admin')}
-              className={`px-5 py-2.5 text-xs font-extrabold uppercase tracking-wider rounded-xl transition-all duration-300 cursor-pointer ${
-                currentView === 'admin'
-                  ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-md shadow-emerald-500/20 scale-100'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              Painel Admin
-            </button>
+          {/* Admin Navigation and Status Pill */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 self-start md:self-auto">
+            {isAdmin && (
+              <div className="flex items-center gap-2 bg-emerald-950/80 border border-emerald-500/30 px-3 py-1.5 rounded-xl text-[11px] font-bold text-emerald-300 shadow-xs">
+                <User className="w-3.5 h-3.5" />
+                <span className="truncate max-w-[130px]" title={adminEmail || ''}>
+                  {adminEmail || 'Organizador'}
+                </span>
+                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 bg-slate-900/60 p-1.5 rounded-2xl border border-white/5" id="header-navigation-controls">
+              <button
+                id="nav-vote-btn"
+                onClick={() => onNavigate('voting')}
+                className={`px-5 py-2.5 text-xs font-extrabold uppercase tracking-wider rounded-xl transition-all duration-300 cursor-pointer ${
+                  currentView === 'voting'
+                    ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-md shadow-emerald-500/20 scale-100'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                Votação Pública
+              </button>
+              
+              {isAdmin && (
+                <button
+                  id="nav-admin-btn"
+                  onClick={() => onNavigate('admin')}
+                  className={`px-5 py-2.5 text-xs font-extrabold uppercase tracking-wider rounded-xl transition-all duration-300 cursor-pointer ${
+                    currentView === 'admin'
+                      ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-md shadow-emerald-500/20 scale-100'
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  Painel Admin
+                </button>
+              )}
+            </div>
+
+            {isAdmin && (
+              <button
+                onClick={onAdminLogout}
+                title="Desconectar Painel Admin"
+                className="p-2.5 rounded-xl text-slate-400 hover:text-rose-400 bg-slate-900/60 hover:bg-rose-950/30 border border-white/5 hover:border-rose-500/30 transition-colors cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
       </div>
