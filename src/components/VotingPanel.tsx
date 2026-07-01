@@ -240,16 +240,16 @@ export default function VotingPanel({
                 </h3>
                 <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5">
                   <Smartphone className="w-3.5 h-3.5 text-slate-400" />
-                  <span>WhatsApp: {voterInfo.phone.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3")}</span>
+                  <span>Logado como: {voterInfo.email || 'Usuário'}</span>
                 </p>
               </div>
             </div>
             
             <button
-              onClick={onLogoutVoter}
+              onClick={onLogout}
               className="px-4 py-2 rounded-xl border border-slate-200 hover:border-rose-300 text-slate-500 hover:text-rose-600 bg-white hover:bg-rose-50 text-xs font-black uppercase tracking-wider transition-colors cursor-pointer shrink-0"
             >
-              Alterar Celular / Sair
+              Sair da Conta
             </button>
           </div>
         ) : (
@@ -268,16 +268,13 @@ export default function VotingPanel({
                   Faça login para habilitar sua votação
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Preencha seu nome e WhatsApp para validar, auditar e assegurar a autenticidade de seus votos.
+                  Entre com sua conta Google para validar, auditar e assegurar a autenticidade de seus votos.
                 </p>
               </div>
             </div>
             
             <button
-              onClick={() => {
-                setPendingPlayerIdToVote(null);
-                setShowAuthModal(true);
-              }}
+              onClick={onLogin}
               className="px-5 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-900 text-white hover:shadow-md text-xs font-black uppercase tracking-widest transition-all cursor-pointer shrink-0"
             >
               Identificar-se agora

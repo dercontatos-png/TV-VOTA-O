@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Plus, Edit2, Trash2, KeyRound, LogOut, RefreshCw, 
-  Upload, Shield, FileImage, ClipboardList, Info, HelpCircle, Eye, Download
+  Upload, Shield, FileImage, ClipboardList, Info, HelpCircle, Eye, Download,
+  Link, Copy, Check
 } from 'lucide-react';
 import { Player, SystemConfig, Vote } from '../types';
 import { addPlayer, updatePlayer, deletePlayer, resetAllVotes, getVotesHistory } from '../dbService';
@@ -15,12 +16,6 @@ interface AdminPanelProps {
 }
 
 export default function AdminPanel({ players, onRefresh, config, onUpdateConfig }: AdminPanelProps) {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem('craque_admin_logged') === 'true';
-  });
-  const [password, setPassword] = useState('');
-  const [loginError, setLoginError] = useState('');
-
   // Player Form states
   const [isEditing, setIsEditing] = useState(false);
   const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
@@ -48,6 +43,19 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
 
   const [votesHistory, setVotesHistory] = useState<Vote[]>([]);
 
+  const [selectedPlayerLink, setSelectedPlayerLink] = useState('');
+  const [generatedLink, setGeneratedLink] = useState(window.location.origin + '?vote=true');
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  const handleCopyGeneratedLink = () => {
+    navigator.clipboard.writeText(generatedLink).then(() => {
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    }).catch(err => {
+      console.error('Failed to copy text: ', err);
+    });
+  };
+
   const logoAzuupRef = useRef<HTMLInputElement>(null);
   const logoCampinenseRef = useRef<HTMLInputElement>(null);
   const logoPrincipalRef = useRef<HTMLInputElement>(null);
@@ -65,10 +73,8 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
   }, [config]);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      loadVotesHistory();
-    }
-  }, [isAuthenticated, players]);
+    loadVotesHistory();
+  }, [players]);
 
   const loadVotesHistory = async () => {
     try {
@@ -157,26 +163,6 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
       img.src = event.target?.result as string;
     };
     reader.readAsDataURL(file);
-  };
-
-  // Constants
-  const DEFAULT_ADMIN_PASSWORD = 'morro'; // Simple password for local championship organizers
-
-  // Authenticate Admin
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password === DEFAULT_ADMIN_PASSWORD || password === 'morro2026') {
-      setIsAuthenticated(true);
-      setLoginError('');
-      localStorage.setItem('craque_admin_logged', 'true');
-    } else {
-      setLoginError('Senha incorreta! Use a senha padrão indicada abaixo.');
-    }
-  };
-
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    localStorage.removeItem('craque_admin_logged');
   };
 
   // Convert File to Base64 String and compress/resize client-side to fit Firestore Limits
@@ -344,60 +330,6 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
     fill: p.team.toLowerCase().includes('campinense') ? '#facc15' : '#2563eb'
   })).sort((a, b) => b.votos - a.votos);
 
-  // 1. Render Login Screen
-  if (!isAuthenticated) {
-    return (
-      <div className="max-w-md mx-auto px-4 py-20 flex flex-col justify-center min-h-[60vh] animate-fade-in" id="admin-login-screen">
-        <div className="bg-white rounded-3xl border border-slate-150 p-8 md:p-10 shadow-xl shadow-slate-200/40 relative">
-          <div className="text-center mb-8">
-            <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white shadow-md shadow-emerald-500/20">
-              <KeyRound className="w-7 h-7 stroke-[2]" />
-            </div>
-            <h2 className="text-2xl font-display font-black text-slate-900 tracking-tight">Painel de Controle</h2>
-            <p className="text-xs font-semibold text-slate-500 mt-2">Acesso restrito para os administradores.</p>
-          </div>
-
-          <form onSubmit={handleLogin} className="space-y-5">
-            <div>
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Senha de Acesso</label>
-              <input
-                id="admin-password-input"
-                type="password"
-                placeholder="Insira a senha de acesso"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4.5 py-3 rounded-2xl border border-slate-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 focus:outline-hidden text-sm text-slate-800 font-mono transition-all placeholder:text-slate-400"
-                required
-              />
-            </div>
-
-            {loginError && (
-              <div className="text-xs font-bold text-rose-600 bg-rose-50 p-3.5 rounded-2xl border border-rose-100 animate-fade-in">
-                {loginError}
-              </div>
-            )}
-
-            <button
-              id="admin-login-submit"
-              type="submit"
-              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-extrabold text-sm tracking-wide shadow-md shadow-emerald-500/15 hover:shadow-lg transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
-            >
-              Entrar no Painel
-            </button>
-          </form>
-
-          {/* Secure Instruction Label to help user test immediately */}
-          <div className="mt-8 border-t border-slate-100 pt-6 text-center">
-            <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold text-amber-800 bg-amber-50 px-4 py-2 rounded-full border border-amber-200/60 shadow-xs">
-              <Info className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-              <span>Senha de Acesso: <strong className="font-mono text-xs">{DEFAULT_ADMIN_PASSWORD}</strong></span>
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   // 2. Render Full Admin Panel View
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 animate-fade-in" id="admin-panel-dashboard">
@@ -417,14 +349,117 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
             <Download className="w-4 h-4 stroke-[2.5]" />
             <span>Exportar PDF</span>
           </button>
-          <button
-            id="admin-logout-btn"
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-100 px-4.5 py-2.5 rounded-2xl transition-all cursor-pointer bg-white"
-          >
-            <LogOut className="w-4 h-4 stroke-[2.5]" />
-            <span>Sair</span>
-          </button>
+        </div>
+      </div>
+
+      {/* Link Generator and Admin Info Banner */}
+      <div className="bg-gradient-to-r from-slate-900 to-indigo-950 text-white rounded-[32px] p-6 md:p-8 shadow-xl mb-8 border border-slate-800 relative overflow-hidden print:hidden" id="admin-link-generator-banner">
+        {/* Soccer field abstract graphic elements */}
+        <div className="absolute inset-0 opacity-[0.03] bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+        <div className="absolute right-0 bottom-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+          <div className="max-w-xl">
+            <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-emerald-500/30">
+              Gerador de Link Seguro
+            </span>
+            <h3 className="text-xl md:text-2xl font-black font-display mt-3 tracking-tight">
+              Compartilhar Votação Prata da Casa
+            </h3>
+            <p className="text-slate-300 text-xs md:text-sm mt-2 leading-relaxed">
+              Gere o link oficial de votação para compartilhar com os eleitores no WhatsApp e redes sociais. 
+              <strong> Quando as pessoas acessarem, precisarão se identificar com o Google logo de cara</strong> para garantir a validade e a segurança de cada voto (máximo de 1 voto por pessoa).
+            </p>
+            
+            <div className="mt-4 bg-slate-950/40 border border-slate-800 p-3 rounded-2xl text-[11px] text-slate-300 leading-relaxed flex items-start gap-2 max-w-lg">
+              <Info className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <strong className="text-white block mb-0.5">Como definir novas contas de administrador?</strong>
+                Os e-mails autorizados estão definidos na variável <code className="bg-slate-900 px-1 py-0.5 rounded font-mono text-emerald-300">ADMIN_EMAILS</code> dentro de <code className="text-slate-400">src/App.tsx</code>. Atualmente, apenas o e-mail <strong>der.contatos@gmail.com</strong> tem privilégios totais de organizador.
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-slate-950/50 p-6 rounded-3xl border border-slate-800 w-full lg:max-w-md shrink-0 flex flex-col gap-4">
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">
+                Tipo do Link de Votação
+              </label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedPlayerLink('');
+                    setGeneratedLink(window.location.origin + '?vote=true');
+                  }}
+                  className={`flex-1 py-2 px-3 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                    !selectedPlayerLink 
+                      ? 'bg-emerald-500 text-slate-950 border-emerald-500 font-extrabold shadow-sm' 
+                      : 'bg-slate-900/40 text-slate-300 border-slate-800 hover:bg-slate-900/60'
+                  }`}
+                >
+                  Link Geral
+                </button>
+                <select
+                  value={selectedPlayerLink}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSelectedPlayerLink(val);
+                    if (val) {
+                      setGeneratedLink(window.location.origin + `?p=${val}`);
+                    } else {
+                      setGeneratedLink(window.location.origin + '?vote=true');
+                    }
+                  }}
+                  className={`flex-1 py-2 px-3 text-xs font-bold rounded-xl border transition-all bg-slate-900/40 text-slate-300 border-slate-800 focus:outline-hidden cursor-pointer ${
+                    selectedPlayerLink ? 'bg-emerald-500 text-slate-950 border-emerald-500 font-extrabold shadow-sm' : ''
+                  }`}
+                >
+                  <option value="" className="text-slate-800 font-bold bg-white">Recomendar Jogador...</option>
+                  {players.map(p => (
+                    <option key={p.id} value={p.id} className="text-slate-800 font-bold bg-white">
+                      {p.name} ({p.team})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
+                Link Gerado
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={generatedLink}
+                  className="bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 font-mono flex-grow focus:outline-hidden"
+                />
+                <button
+                  type="button"
+                  onClick={handleCopyGeneratedLink}
+                  className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm shrink-0 cursor-pointer"
+                >
+                  {linkCopied ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <span>Copiado!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <span>Copiar</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+            
+            <p className="text-[10px] text-slate-400 text-center leading-relaxed">
+              Dica: O link geral abre a votação para todos os atletas. O link recomendado já abre destacando o jogador escolhido.
+            </p>
+          </div>
         </div>
       </div>
 
