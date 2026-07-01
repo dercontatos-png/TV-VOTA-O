@@ -24,6 +24,8 @@ export interface Vote {
   voterName?: string;
   voterPhone?: string;
   voterEmail?: string;
+  ipAddress?: string;
+  locationInfo?: string;
 }
 
 export interface SystemConfig {
@@ -34,4 +36,6 @@ export interface SystemConfig {
   startDate: string; // YYYY-MM-DDTHH:MM
   endDate: string; // YYYY-MM-DDTHH:MM
   votingEnabled: boolean;
+  bannerUrl?: string; // Base64 or url banner
+  primaryColor?: string; // Hex color or pre-defined tailwind class base
 }

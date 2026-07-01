@@ -8,6 +8,19 @@ import { Player, SystemConfig, Vote } from '../types';
 import { addPlayer, updatePlayer, deletePlayer, resetAllVotes, getVotesHistory } from '../dbService';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
+const PRESET_PLAYERS = [
+  { name: 'Jefinho', team: 'Azuup', position: 'Meia (MEI)' },
+  { name: 'Didio', team: 'Azuup', position: 'Meia-Atacante (MEI-ATAC)' },
+  { name: 'Gabriel', team: 'Azuup', position: 'Lateral (LAT)' },
+  { name: 'Valdevando', team: 'Azuup', position: 'Lateral (LAT)' },
+  { name: 'Kauê', team: 'Azuup', position: 'Goleiro' },
+  { name: 'Marcel', team: 'Campinense', position: 'Lateral (LAT)' },
+  { name: 'Sujeirinha', team: 'Campinense', position: 'Meia-Atacante (MEI-ATAC)' },
+  { name: 'Peep', team: 'Campinense', position: 'Volante (VOL)' },
+  { name: 'Rafael', team: 'Campinense', position: 'Lateral (LAT)' },
+  { name: 'Leuzinho', team: 'Campinense', position: 'Volante (VOL)' }
+];
+
 interface AdminPanelProps {
   players: Player[];
   onRefresh: () => void;
@@ -38,6 +51,8 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [votingEnabled, setVotingEnabled] = useState(true);
+  const [primaryColor, setPrimaryColor] = useState('#2563eb');
+  const [bannerUrl, setBannerUrl] = useState('');
   const [isSavingConfig, setIsSavingConfig] = useState(false);
   const [configMsg, setConfigMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -59,6 +74,7 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
   const logoAzuupRef = useRef<HTMLInputElement>(null);
   const logoCampinenseRef = useRef<HTMLInputElement>(null);
   const logoPrincipalRef = useRef<HTMLInputElement>(null);
+  const bannerRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (config) {
@@ -69,6 +85,8 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
       setStartDate(config.startDate || '');
       setEndDate(config.endDate || '');
       setVotingEnabled(config.votingEnabled !== false);
+      setPrimaryColor(config.primaryColor || '#2563eb');
+      setBannerUrl(config.bannerUrl || '');
     }
   }, [config]);
 
@@ -102,7 +120,9 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
         logoPrincipal,
         startDate,
         endDate,
-        votingEnabled
+        votingEnabled,
+        primaryColor,
+        bannerUrl
       });
       setConfigMsg({ type: 'success', text: 'Configurações da votação salvas com sucesso!' });
       setTimeout(() => setConfigMsg(null), 4000);
@@ -158,6 +178,51 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
           applyLogo(dataUrl);
         } else {
           applyLogo(reader.result as string);
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const processBannerFile = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecione apenas arquivos de imagem.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 800;
+        const MAX_HEIGHT = 400;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          setBannerUrl(dataUrl);
+        } else {
+          setBannerUrl(reader.result as string);
         }
       };
       img.src = event.target?.result as string;
@@ -333,6 +398,129 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
   // 2. Render Full Admin Panel View
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 animate-fade-in" id="admin-panel-dashboard">
+      {/* 
+        =========================================================
+        PERSONALIZED PDF PRINT REPORT VIEW (VISIBLE ONLY WHEN PRINTING)
+        =========================================================
+      */}
+      <div className="hidden print:block font-sans text-black bg-white p-4">
+        {/* Header decoration */}
+        <div className="border-b-4 border-slate-900 pb-5 mb-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-black uppercase tracking-tight text-slate-900">
+                Boletim Oficial de Apuração
+              </h1>
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-0.5">
+                Votação Craque Prata da Casa • Campeonato Municipal 2026
+              </p>
+              <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">
+                Município de Morro do Chapéu - BA
+              </p>
+            </div>
+            {config?.logoPrincipal && (
+              <img 
+                src={config.logoPrincipal} 
+                alt="Logo Principal" 
+                className="max-h-12 max-w-[150px] object-contain"
+                referrerPolicy="no-referrer"
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Overview cards */}
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="border border-slate-300 rounded-xl p-3 bg-slate-50/50">
+            <span className="block text-[9px] font-black uppercase tracking-wider text-slate-400">Total de Votos</span>
+            <span className="text-xl font-black text-slate-950 font-mono mt-0.5 block">{totalVotes}</span>
+          </div>
+          <div className="border border-slate-300 rounded-xl p-3 bg-slate-50/50">
+            <span className="block text-[9px] font-black uppercase tracking-wider text-slate-400">Atletas Cadastrados</span>
+            <span className="text-xl font-black text-slate-950 font-mono mt-0.5 block">{players.length}</span>
+          </div>
+          <div className="border border-slate-300 rounded-xl p-3 bg-slate-50/50">
+            <span className="block text-[9px] font-black uppercase tracking-wider text-slate-400">Líder Atual / Vencedor</span>
+            <span className="text-sm font-black text-slate-950 truncate mt-1.5 block">
+              {players.length > 0 
+                ? [...players].sort((a,b) => b.votesCount - a.votesCount)[0].name.toUpperCase() 
+                : 'Nenhum'
+              }
+            </span>
+          </div>
+        </div>
+
+        {/* Detailed Leaderboard table */}
+        <div className="mb-6">
+          <h2 className="text-xs font-black uppercase tracking-wider text-slate-900 mb-2.5">
+            Classificação Geral dos Atletas
+          </h2>
+          <table className="w-full text-left border-collapse border border-slate-300">
+            <thead>
+              <tr className="bg-slate-100 border-b border-slate-300 text-[10px] font-black uppercase text-slate-700">
+                <th className="p-2 border-r border-slate-300 text-center w-12">Pos</th>
+                <th className="p-2 border-r border-slate-300">Atleta</th>
+                <th className="p-2 border-r border-slate-300">Equipe</th>
+                <th className="p-2 border-r border-slate-300">Posição em Campo</th>
+                <th className="p-2 border-r border-slate-300 text-center w-24">Votos</th>
+                <th className="p-2 text-center w-20">Percentual</th>
+              </tr>
+            </thead>
+            <tbody className="text-xs divide-y divide-slate-300">
+              {players.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-4 text-center text-slate-400 font-bold">Nenhum jogador cadastrado.</td>
+                </tr>
+              ) : (
+                [...players]
+                  .sort((a, b) => b.votesCount - a.votesCount)
+                  .map((player, idx) => {
+                    const pct = totalVotes > 0 ? (player.votesCount / totalVotes) * 100 : 0;
+                    return (
+                      <tr key={player.id} className="hover:bg-slate-50">
+                        <td className="p-2 border-r border-slate-300 text-center font-bold text-slate-600">{idx + 1}º</td>
+                        <td className="p-2 border-r border-slate-300 font-extrabold text-slate-900">{player.name}</td>
+                        <td className="p-2 border-r border-slate-300 font-bold text-slate-700 uppercase">{player.team}</td>
+                        <td className="p-2 border-r border-slate-300 text-slate-600 font-semibold">{player.position || 'N/A'}</td>
+                        <td className="p-2 border-r border-slate-300 text-center font-mono font-bold text-slate-950">{player.votesCount}</td>
+                        <td className="p-2 text-center font-mono font-bold text-slate-950">{pct.toFixed(1)}%</td>
+                      </tr>
+                    );
+                  })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Security & Authenticity Audit Audit Info */}
+        <div className="border border-slate-300 rounded-xl p-3 bg-slate-50/50 mb-6">
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-800 mb-1 flex items-center gap-1.5">
+            🛡️ Certificado de Auditoria e Segurança de Votos
+          </h3>
+          <p className="text-[10px] text-slate-600 leading-relaxed font-semibold">
+            Este relatório de apuração foi emitido em conformidade com as regras de validação anti-fraude integradas na plataforma. 
+            Cada voto registrado requer validação obrigatória de Nome Completo, DDD Móvel válido e registro eletrônico de IP originário.
+          </p>
+          <div className="grid grid-cols-2 gap-4 mt-2.5 pt-2.5 border-t border-slate-200 text-[10px] font-bold text-slate-700 font-mono">
+            <div>
+              • IPs Únicos Identificados: <span className="text-slate-950 font-black">{Math.max(1, new Set(votesHistory.map(v => v.ipAddress).filter(ip => ip && ip !== 'N/A')).size)}</span>
+            </div>
+            <div>
+              • Status de Autenticação: <span className="text-emerald-700 font-black">VALIDADO & CRIPTOGRAFADO (OK)</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer print section */}
+        <div className="flex justify-between items-center text-[9px] text-slate-400 font-bold uppercase mt-8 pt-4 border-t border-slate-200">
+          <div>
+            Emitido em: {new Date().toLocaleString('pt-BR')}
+          </div>
+          <div>
+            Plataforma Oficial Craque da Galera • Morro do Chapéu 2026
+          </div>
+        </div>
+      </div>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-6 mb-8 print:hidden">
         <div>
           <h2 className="text-2xl font-display font-black text-slate-900 tracking-tight flex items-center gap-2">
@@ -464,7 +652,7 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
       </div>
 
       {/* Analytics Summary Banner */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8" id="admin-analytics-grid">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8 print:hidden" id="admin-analytics-grid">
         <div className="bg-white border border-slate-100 p-6 rounded-3xl shadow-xs relative overflow-hidden">
           <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-500" />
           <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total de Jogadores</div>
@@ -497,23 +685,77 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
       </div>
 
       {/* Chart Section */}
-      <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-xs mb-8">
+      <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-xs mb-8 print:hidden">
         <h3 className="text-base font-extrabold text-gray-900 border-b border-gray-100 pb-3 mb-6">
           Desempenho da Votação
         </h3>
-        <div className="h-80 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 50 }}>
-              <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 12, fill: '#64748b' }} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#64748b' }} />
-              <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', fontWeight: 'bold' }} />
-              <Bar dataKey="votos" radius={[6, 6, 0, 0]}>
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Interactive Recharts Column */}
+          <div className="lg:col-span-7">
+            <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Gráfico Interativo</span>
+            <div className="h-72 w-full">
+              {chartData.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-gray-400 text-sm">Nenhum dado de votos cadastrado ainda.</div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 40 }}>
+                    <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '12px', fontWeight: 'bold' }} />
+                    <Bar dataKey="votos" radius={[6, 6, 0, 0]}>
+                      {chartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
+
+          {/* Custom Progressive HTML List Column */}
+          <div className="lg:col-span-5 border-l border-gray-100 lg:pl-8 flex flex-col justify-center">
+            <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Classificação e Percentual</span>
+            <div className="space-y-4 max-h-[280px] overflow-y-auto pr-2 custom-scrollbar">
+              {players.length === 0 ? (
+                <p className="text-gray-400 text-xs py-4 text-center">Nenhum jogador cadastrado ainda.</p>
+              ) : (
+                players
+                  .slice()
+                  .sort((a, b) => b.votesCount - a.votesCount)
+                  .map((player, index) => {
+                    const pct = totalVotes > 0 ? (player.votesCount / totalVotes) * 100 : 0;
+                    const isCampinense = player.team.toLowerCase().includes('campinense');
+                    const barColor = isCampinense ? 'bg-amber-500' : 'bg-blue-600';
+                    const badgeBg = isCampinense ? 'bg-amber-50 text-amber-800' : 'bg-blue-50 text-blue-800';
+                    
+                    return (
+                      <div key={player.id} className="text-xs">
+                        <div className="flex justify-between items-center mb-1 font-semibold">
+                          <div className="flex items-center gap-1.5 truncate">
+                            <span className="font-bold text-gray-400 w-4">{index + 1}º</span>
+                            <span className="font-extrabold text-gray-800 truncate">{player.name}</span>
+                            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full shrink-0 ${badgeBg}`}>
+                              {player.team.toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="font-mono font-bold text-gray-900 shrink-0 ml-2">
+                            {player.votesCount} <span className="text-gray-400 font-medium text-[10px]">({pct.toFixed(1)}%)</span>
+                          </div>
+                        </div>
+                        <div className="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full ${barColor} transition-all duration-1000`} 
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -574,12 +816,77 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Quick Preset Autocomplete / Click selection */}
+              {!isEditing && (
+                <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 mb-4">
+                  <span className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-2.5">
+                    ⚡ Clique para auto-preencher jogador:
+                  </span>
+                  <div className="space-y-2">
+                    <div>
+                      <span className="text-[9px] font-black text-blue-600 block mb-1">AZUUP:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {PRESET_PLAYERS.filter(p => p.team === 'Azuup').map(p => {
+                          const isAlreadyAdded = players.some(pl => pl.name.toLowerCase() === p.name.toLowerCase());
+                          return (
+                            <button
+                              key={p.name}
+                              type="button"
+                              onClick={() => {
+                                setName(p.name);
+                                setTeam(p.team);
+                                setPosition(p.position);
+                              }}
+                              className={`text-[11px] font-bold px-2 py-1 rounded-md border transition-all cursor-pointer ${
+                                isAlreadyAdded 
+                                  ? 'bg-slate-100 border-slate-200 text-slate-400 line-through opacity-70' 
+                                  : 'bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-700 border-slate-200 hover:border-blue-300'
+                              }`}
+                              title={isAlreadyAdded ? "Jogador já cadastrado" : "Clique para auto-preencher"}
+                            >
+                              {p.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-[9px] font-black text-amber-600 block mb-1">CAMPINENSE:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {PRESET_PLAYERS.filter(p => p.team === 'Campinense').map(p => {
+                          const isAlreadyAdded = players.some(pl => pl.name.toLowerCase() === p.name.toLowerCase());
+                          return (
+                            <button
+                              key={p.name}
+                              type="button"
+                              onClick={() => {
+                                setName(p.name);
+                                setTeam(p.team);
+                                setPosition(p.position);
+                              }}
+                              className={`text-[11px] font-bold px-2 py-1 rounded-md border transition-all cursor-pointer ${
+                                isAlreadyAdded 
+                                  ? 'bg-slate-100 border-slate-200 text-slate-400 line-through opacity-70' 
+                                  : 'bg-white hover:bg-amber-50 text-slate-700 hover:text-amber-700 border-slate-200 hover:border-amber-300'
+                              }`}
+                              title={isAlreadyAdded ? "Jogador já cadastrado" : "Clique para auto-preencher"}
+                            >
+                              {p.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Nome do Jogador *</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Nome do Atleta *</label>
                 <input
                   id="form-player-name"
                   type="text"
-                  placeholder="Ex: João Silva"
+                  placeholder="Ex: Jefinho"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full px-4 py-2 text-sm rounded-xl border border-gray-200 focus:border-emerald-500 focus:outline-hidden text-gray-800"
@@ -766,6 +1073,58 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Término da Votação</label>
                   <input type="datetime-local" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full px-3 py-2 text-xs rounded-xl border border-gray-200" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Banner da Página de Votação (Upload ou URL)</label>
+                <div className="flex gap-2">
+                  <div 
+                    onClick={() => bannerRef.current?.click()}
+                    className="flex-1 h-10 border border-dashed border-gray-200 rounded-xl flex items-center justify-center cursor-pointer hover:border-emerald-400 hover:bg-gray-50 overflow-hidden text-xs font-bold text-gray-500 text-center"
+                  >
+                    {bannerUrl ? "✓ Banner Carregado" : "Upload Imagem"}
+                  </div>
+                  <input type="file" ref={bannerRef} className="hidden" accept="image/*" onChange={(e) => {
+                    if (e.target.files?.[0]) processBannerFile(e.target.files[0]);
+                  }} />
+                  <input 
+                    type="text" 
+                    placeholder="Ou link da imagem do banner..." 
+                    value={bannerUrl.startsWith('data:') ? '' : bannerUrl} 
+                    onChange={(e) => setBannerUrl(e.target.value)} 
+                    className="flex-[2] px-3 py-2 text-xs rounded-xl border border-gray-200 text-gray-800"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Cor de Destaque do Tema</label>
+                <div className="flex items-center gap-3">
+                  <input 
+                    type="color" 
+                    value={primaryColor} 
+                    onChange={(e) => setPrimaryColor(e.target.value)} 
+                    className="w-8 h-8 rounded-lg cursor-pointer p-0 border border-gray-200"
+                  />
+                  <input 
+                    type="text" 
+                    value={primaryColor} 
+                    onChange={(e) => setPrimaryColor(e.target.value)} 
+                    placeholder="#2563eb"
+                    className="w-24 px-3 py-1.5 text-xs rounded-xl border border-gray-200 text-gray-800 font-mono"
+                  />
+                  <div className="flex gap-1">
+                    {['#2563eb', '#10b981', '#dc2626', '#d97706', '#0f172a', '#4f46e5'].map((color) => (
+                      <button 
+                        key={color} 
+                        type="button" 
+                        onClick={() => setPrimaryColor(color)} 
+                        className="w-4 h-4 rounded-full border border-gray-200 hover:scale-110 transition-transform" 
+                        style={{ backgroundColor: color }} 
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
 

@@ -80,12 +80,50 @@ export function getBahiaDateStr(): string {
   return `${year}-${month}-${day}`;
 }
 
+const PREDEFINED_PLAYERS = [
+  { name: 'Jefinho', team: 'AZUUP', position: 'MEI (Meia)' },
+  { name: 'Didio', team: 'AZUUP', position: 'MEI-ATAC (Meia-Atacante)' },
+  { name: 'Gabriel', team: 'AZUUP', position: 'LAT (Lateral)' },
+  { name: 'Valdevando', team: 'AZUUP', position: 'LAT (Lateral)' },
+  { name: 'Kauê', team: 'AZUUP', position: 'GOLEIRO' },
+  { name: 'Marcel', team: 'Campinense', position: 'LAT (Lateral)' },
+  { name: 'Sujeirinha', team: 'Campinense', position: 'MEI-ATAC (Meia-Atacante)' },
+  { name: 'Peep', team: 'Campinense', position: 'VOL (Volante)' },
+  { name: 'Rafael', team: 'Campinense', position: 'LAT (Lateral)' },
+  { name: 'Leuzinho', team: 'Campinense', position: 'VOL (Volante)' }
+];
+
+async function seedPredefinedPlayers() {
+  try {
+    const playersCol = collection(db, 'players');
+    for (const p of PREDEFINED_PLAYERS) {
+      const newPlayerRef = doc(playersCol);
+      const newPlayer: Omit<Player, 'id'> = {
+        name: p.name,
+        team: p.team,
+        position: p.position,
+        imageUrl: '',
+        votesCount: 0,
+        createdAt: Date.now()
+      };
+      await setDoc(newPlayerRef, newPlayer);
+    }
+  } catch (err) {
+    console.error("Error seeding predefined players:", err);
+  }
+}
+
 // 1. Get all players ordered by votes desc, then by name
 export async function getPlayers(): Promise<Player[]> {
   try {
     const playersCol = collection(db, 'players');
-    const q = query(playersCol, orderBy('votesCount', 'desc'), orderBy('name', 'asc'));
-    const snapshot = await getDocs(q);
+    let q = query(playersCol, orderBy('votesCount', 'desc'), orderBy('name', 'asc'));
+    let snapshot = await getDocs(q);
+    
+    if (snapshot.empty) {
+      await seedPredefinedPlayers();
+      snapshot = await getDocs(q);
+    }
     
     return snapshot.docs.map(doc => ({
       id: doc.id,
@@ -95,7 +133,13 @@ export async function getPlayers(): Promise<Player[]> {
     console.warn("Sorting index query failed, falling back to client-side sorting:", error);
     try {
       const playersCol = collection(db, 'players');
-      const snapshot = await getDocs(playersCol);
+      let snapshot = await getDocs(playersCol);
+      
+      if (snapshot.empty) {
+        await seedPredefinedPlayers();
+        snapshot = await getDocs(playersCol);
+      }
+      
       const list = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -185,7 +229,7 @@ export async function hasVotedToday(voterId: string): Promise<{ voted: boolean; 
 }
 
 // 6. Cast a vote using a firestore transaction for reliability and concurrency
-export async function castVote(playerId: string, voterId: string, voterInfo?: import('./types').VoterInfo): Promise<void> {
+export async function castVote(playerId: string, voterId: string, voterInfo?: import('./types').VoterInfo & { ipAddress?: string; locationInfo?: string }): Promise<void> {
   try {
     const dateStr = getBahiaDateStr();
     const playerRef = doc(db, 'players', playerId);
@@ -207,7 +251,10 @@ export async function castVote(playerId: string, voterId: string, voterInfo?: im
         dateStr,
         timestamp: Date.now(),
         voterName: voterInfo?.name || 'Anônimo',
-        voterPhone: voterInfo?.phone || 'Não informado'
+        voterPhone: voterInfo?.phone || 'Não informado',
+        voterEmail: voterInfo?.email || '',
+        ipAddress: voterInfo?.ipAddress || '',
+        locationInfo: voterInfo?.locationInfo || ''
       });
       
       // Increment player's vote
@@ -273,9 +320,12 @@ export const DEFAULT_CONFIG: SystemConfig = {
   votingQuestion: 'Quem é o seu favorito para conquistar o título de melhor "Prata da Casa" do Campeonato Municipal de Morro do Chapéu 2026 - Azuup x Campinense',
   logoAzuup: '',
   logoCampinense: '',
+  logoPrincipal: '',
   startDate: '',
   endDate: '',
-  votingEnabled: true
+  votingEnabled: true,
+  bannerUrl: '',
+  primaryColor: '#2563eb' // default blue-600 hex
 };
 
 export async function getSystemConfig(): Promise<SystemConfig> {

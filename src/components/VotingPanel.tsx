@@ -240,7 +240,7 @@ export default function VotingPanel({
                 </h3>
                 <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5">
                   <Smartphone className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Logado como: {voterInfo.email || 'Usuário'}</span>
+                  <span>WhatsApp: {voterInfo.phone || voterInfo.email || 'Usuário'}</span>
                 </p>
               </div>
             </div>

@@ -19,6 +19,59 @@ function getOrCreateVoterId(): string {
   return voterId;
 }
 
+// Cookie helpers for anti-fraud device fingerprinting
+function setCookie(name: string, value: string, days = 365) {
+  const date = new Date();
+  date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+  const expires = "; expires=" + date.toUTCString();
+  document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax";
+}
+
+function getCookie(name: string): string | null {
+  const nameEQ = name + "=";
+  const ca = document.cookie.split(';');
+  for(let i=0; i < ca.length; i++) {
+    let c = ca[i];
+    while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+    if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+  }
+  return null;
+}
+
+// Brazilian phone pattern and abuse validations
+function validateBrazilianPhone(phone: string): string | null {
+  const clean = phone.replace(/\D/g, '');
+  
+  if (clean.length < 10 || clean.length > 11) {
+    return 'O número de telefone deve conter o DDD com 2 dígitos e mais 8 ou 9 dígitos.';
+  }
+  
+  const ddd = parseInt(clean.substring(0, 2), 10);
+  if (ddd < 11 || ddd > 99) {
+    return 'DDD inválido. Por favor, insira um DDD real do Brasil.';
+  }
+  
+  if (/^(\d)\1+$/.test(clean)) {
+    return 'Número inválido. Evite usar sequências repetidas (Ex: 99999-9999).';
+  }
+  
+  const fakeSequences = ['12345678', '98765432', '01234567'];
+  for (const seq of fakeSequences) {
+    if (clean.includes(seq)) {
+      return 'Número de telefone inválido ou fictício detectado.';
+    }
+  }
+
+  if (clean.length === 11) {
+    const firstDigit = clean.charAt(2);
+    if (firstDigit !== '9') {
+      return 'Celulares com 11 dígitos devem começar com o dígito 9.';
+    }
+  }
+  
+  return null;
+}
+
 // Defina aqui quais e-mails têm permissão de Administrador
 const ADMIN_EMAILS = [
   'der.contatos@gmail.com'
@@ -26,14 +79,22 @@ const ADMIN_EMAILS = [
 
 export default function App() {
   const urlParams = new URLSearchParams(window.location.search);
+  const isAdminParam = urlParams.has('admin') || window.location.hash === '#admin';
   const isSharedLink = urlParams.has('vote') || urlParams.has('player') || urlParams.has('p');
 
-  const [view, setView] = useState<'voting' | 'admin'>(isSharedLink ? 'voting' : 'admin');
+  const [view, setView] = useState<'voting' | 'admin'>(isAdminParam ? 'admin' : 'voting');
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [isVoting, setIsVoting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [votedPlayerName, setVotedPlayerName] = useState('');
+
+  // IP & Location Tracking States
+  const [ipAddress, setIpAddress] = useState<string>('');
+  const [locationInfo, setLocationInfo] = useState<string>('');
+
+  // Hidden admin click gesture counter
+  const [adminClickCount, setAdminClickCount] = useState(0);
 
   // Secure Admin Authentication State
   const [adminUser, setAdminUser] = useState<FirebaseUser | null>(null);
@@ -58,8 +119,8 @@ export default function App() {
     ? `voter_${voterInfo.id}`
     : getOrCreateVoterId();
 
-  // Voter login with Name and Phone states
-  const [loginMethod, setLoginMethod] = useState<'google' | 'phone'>('google');
+  // Voter login with Name and Phone states (Force phone by default, no google tab!)
+  const [loginMethod, setLoginMethod] = useState<'google' | 'phone'>('phone');
   const [voterNameInput, setVoterNameInput] = useState('');
   const [voterPhoneInput, setVoterPhoneInput] = useState('');
   const [phoneError, setPhoneError] = useState<string | null>(null);
@@ -144,8 +205,16 @@ export default function App() {
       return;
     }
 
-    if (cleanPhone.length < 10) {
-      setPhoneError('Por favor, informe um número de WhatsApp/Telefone válido com DDD.');
+    // Ensure they provided name and surname
+    if (!trimmedName.includes(' ') || trimmedName.split(' ').filter(p => p.length > 0).length < 2) {
+      setPhoneError('Por favor, informe seu nome e sobrenome completo para identificação correta.');
+      return;
+    }
+
+    // Phone validation
+    const phoneValErr = validateBrazilianPhone(voterPhoneInput);
+    if (phoneValErr) {
+      setPhoneError(phoneValErr);
       return;
     }
 
@@ -169,6 +238,36 @@ export default function App() {
     // Redirect / confirm
     setView('voting');
   };
+
+  // Fetch IP & Location on mount
+  useEffect(() => {
+    const fetchGeoIP = async () => {
+      try {
+        const response = await fetch('https://ipapi.co/json/');
+        if (response.ok) {
+          const data = await response.json();
+          setIpAddress(data.ip || '');
+          setLocationInfo(`${data.city || 'Desconhecido'}, ${data.region_code || 'BA'} - ${data.country_name || 'Brasil'}`);
+        } else {
+          const fallback = await fetch('https://api.ipify.org?format=json');
+          const fallbackData = await fallback.json();
+          setIpAddress(fallbackData.ip || '');
+          setLocationInfo('Localização Indisponível');
+        }
+      } catch (err) {
+        console.warn("Failed to fetch geo IP, using fallback...", err);
+        try {
+          const fallback = await fetch('https://api.ipify.org?format=json');
+          const fallbackData = await fallback.json();
+          setIpAddress(fallbackData.ip || '');
+          setLocationInfo('Localização Indisponível');
+        } catch (e) {
+          console.warn("Could not retrieve IP address", e);
+        }
+      }
+    };
+    fetchGeoIP();
+  }, []);
 
   // Generic Google Sign-In with popup trigger
   const handleGoogleLogin = async () => {
@@ -218,10 +317,30 @@ export default function App() {
       const fetchedPlayers = await getPlayers();
       setPlayers(fetchedPlayers);
 
-      // 3. Query Firestore if this voter already voted today
-      const voteState = await hasVotedToday(voterId);
-      setVotedToday(voteState.voted);
-      setVotedPlayerId(voteState.playerVotedId);
+      // 3. Query device anti-fraud blocks first
+      const dateStr = getBahiaDateStr();
+      const localBlocked = localStorage.getItem(`craque_voted_${dateStr}`) === 'true';
+      const cookieVal = getCookie('craque_voted_dates');
+      let cookieBlocked = false;
+      if (cookieVal) {
+        try {
+          const dates = JSON.parse(cookieVal) as string[];
+          if (dates.includes(dateStr)) {
+            cookieBlocked = true;
+          }
+        } catch (e) {}
+      }
+
+      if (localBlocked || cookieBlocked) {
+        setVotedToday(true);
+        const voteState = await hasVotedToday(voterId);
+        setVotedPlayerId(voteState.playerVotedId);
+      } else {
+        // Query Firestore if this voter already voted today
+        const voteState = await hasVotedToday(voterId);
+        setVotedToday(voteState.voted);
+        setVotedPlayerId(voteState.playerVotedId);
+      }
     } catch (err) {
       console.error("Error loading application data:", err);
     } finally {
@@ -247,8 +366,28 @@ export default function App() {
       const selectedPlayer = players.find(p => p.id === playerId);
       const playerName = selectedPlayer ? selectedPlayer.name : 'seu jogador preferido';
       
-      // Perform transactional vote casting
-      await castVote(playerId, voterId, voterInfo || undefined);
+      // Perform transactional vote casting with IP and Location tracked
+      await castVote(playerId, voterId, {
+        ...(voterInfo || { id: voterId, name: 'Anônimo', email: '' }),
+        ipAddress: ipAddress || 'N/A',
+        locationInfo: locationInfo || 'N/A'
+      });
+      
+      // Save anti-fraud device records on client
+      const dateStr = getBahiaDateStr();
+      localStorage.setItem(`craque_voted_${dateStr}`, 'true');
+      
+      const currentCookieVal = getCookie('craque_voted_dates');
+      let votedDates: string[] = [];
+      if (currentCookieVal) {
+        try {
+          votedDates = JSON.parse(currentCookieVal);
+        } catch (e) {}
+      }
+      if (!votedDates.includes(dateStr)) {
+        votedDates.push(dateStr);
+      }
+      setCookie('craque_voted_dates', JSON.stringify(votedDates), 365);
       
       setVotedPlayerName(playerName);
       setVotedToday(true);
@@ -346,85 +485,152 @@ export default function App() {
 
   // Voter View Login Screen (Fullscreen)
   if (view === 'voting' && !voterInfo && !adminUser) {
+    const dynamicColor = config?.primaryColor || '#2563eb';
+    const hasBanner = !!config?.bannerUrl;
+    
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 relative overflow-hidden">
-        {/* Decorative background elements */}
-        <div className="absolute top-0 left-0 w-full h-[50vh] bg-gradient-to-b from-blue-600 to-slate-50 z-0"></div>
-        <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-white/20 rounded-full blur-3xl z-0 pointer-events-none"></div>
-        <div className="absolute top-[20%] right-[-5%] w-72 h-72 bg-emerald-500/20 rounded-full blur-3xl z-0 pointer-events-none"></div>
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 relative overflow-hidden font-sans">
+        <style dangerouslySetInnerHTML={{__html: `
+          :root {
+            --primary-theme-color: ${dynamicColor};
+          }
+        `}} />
 
-        <div className="relative z-10 w-full max-w-md flex flex-col items-center mt-[-5vh]">
-          {/* Logo / Branding */}
-          <div className="mb-8 flex flex-col items-center text-center">
-            <div className="w-16 h-16 bg-white rounded-3xl shadow-xl flex items-center justify-center mb-3 border border-blue-50">
-              <Trophy className="w-8 h-8 text-blue-600" />
-            </div>
-            <h1 className="text-3xl font-black text-white font-display tracking-tight leading-tight">
+        {/* Decorative background elements */}
+        <div 
+          className="absolute top-0 left-0 w-full h-[50vh] z-0 transition-colors duration-300"
+          style={{ backgroundColor: dynamicColor }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-transparent"></div>
+        </div>
+        <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-white/10 rounded-full blur-3xl z-0 pointer-events-none"></div>
+        <div className="absolute top-[20%] right-[-5%] w-72 h-72 bg-white/10 rounded-full blur-3xl z-0 pointer-events-none"></div>
+
+        <div className="relative z-10 w-full max-w-lg flex flex-col items-center my-6">
+          {/* Main Branding Header with TV Logo if set */}
+          <div className="mb-6 flex flex-col items-center text-center px-4">
+            {config?.logoPrincipal ? (
+              <div 
+                onClick={() => {
+                  setAdminClickCount(c => {
+                    if (c + 1 >= 5) {
+                      setView('admin');
+                      window.location.hash = 'admin';
+                      return 0;
+                    }
+                    return c + 1;
+                  });
+                }}
+                className="bg-black/15 backdrop-blur-xs p-3.5 rounded-2xl border border-white/10 shadow-sm mb-4 transition-all hover:scale-105 flex items-center justify-center cursor-pointer select-none"
+              >
+                <img 
+                  src={config.logoPrincipal} 
+                  alt="TV Logo" 
+                  className="max-h-16 max-w-[200px] object-contain" 
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            ) : (
+              <div 
+                onClick={() => {
+                  setAdminClickCount(c => {
+                    if (c + 1 >= 5) {
+                      setView('admin');
+                      window.location.hash = 'admin';
+                      return 0;
+                    }
+                    return c + 1;
+                  });
+                }}
+                className="w-16 h-16 bg-white rounded-3xl shadow-xl flex items-center justify-center mb-3 border border-slate-100 transition-transform hover:scale-105 cursor-pointer"
+              >
+                <Trophy className="w-8 h-8" style={{ color: dynamicColor }} />
+              </div>
+            )}
+            
+            <h1 
+              onClick={() => {
+                setAdminClickCount(c => {
+                  if (c + 1 >= 5) {
+                    setView('admin');
+                    window.location.hash = 'admin';
+                    return 0;
+                  }
+                  return c + 1;
+                });
+              }}
+              className="text-2xl md:text-3xl font-black text-white font-display tracking-tight leading-tight uppercase drop-shadow-md cursor-pointer select-none"
+            >
               Prata da Casa
             </h1>
-            <p className="text-blue-100 text-xs font-bold uppercase tracking-widest mt-1.5">
-              Votação Oficial 2026
+            <p className="text-white/90 text-xs font-black uppercase tracking-widest mt-1 bg-black/10 px-3 py-1 rounded-full border border-white/10 select-none">
+              Campeonato Municipal 2026
             </p>
           </div>
 
-          <div className="bg-white p-6 md:p-8 rounded-[32px] shadow-2xl w-full border border-slate-100 flex flex-col items-center animate-fade-in relative">
-            <div className="absolute -top-6 bg-gradient-to-r from-emerald-500 to-emerald-400 text-white text-xs font-black uppercase tracking-widest px-4 py-2 rounded-full shadow-lg border-2 border-white">
-              Acesso Seguro
-            </div>
+          {/* Login Card */}
+          <div className="bg-white rounded-[32px] shadow-2xl w-full border border-slate-100 overflow-hidden animate-fade-in relative">
             
-            <h2 className="text-xl font-black text-slate-900 mb-2 font-display text-center mt-3">Identifique-se para votar</h2>
-            <p className="text-slate-500 text-xs md:text-sm mb-6 text-center leading-relaxed">
-              Para garantir a validade e justiça da votação, escolha uma das opções abaixo para entrar.
-            </p>
-
-            {/* Tab switchers */}
-            <div className="flex w-full bg-slate-100 p-1.5 rounded-2xl mb-6 border border-slate-200/50">
-              <button
-                type="button"
-                onClick={() => setLoginMethod('google')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                  loginMethod === 'google'
-                    ? 'bg-white text-blue-600 shadow-sm font-black'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-4 h-4" />
-                <span>Google</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setLoginMethod('phone')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                  loginMethod === 'phone'
-                    ? 'bg-white text-emerald-600 shadow-sm font-black'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <Smartphone className="w-4 h-4 text-emerald-500" />
-                <span>WhatsApp</span>
-              </button>
-            </div>
-
-            {loginMethod === 'google' ? (
-              <div className="w-full flex flex-col items-center animate-fade-in">
-                <p className="text-xs text-slate-400 text-center mb-5 leading-normal">
-                  Entre usando sua conta Google de forma rápida e totalmente segura.
-                </p>
-                <button
-                  onClick={handleGoogleLogin}
-                  className="w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-50 border-2 border-slate-200 text-slate-700 font-bold py-4 px-4 rounded-xl shadow-sm transition-all hover:border-blue-400 hover:shadow-md hover:-translate-y-0.5 cursor-pointer text-[15px]"
-                >
-                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-6 h-6" />
-                  <span>Entrar com o Google</span>
-                </button>
+            {/* Custom Banner if defined */}
+            {hasBanner ? (
+              <div className="w-full h-44 md:h-52 overflow-hidden relative border-b border-slate-100">
+                <img 
+                  src={config?.bannerUrl} 
+                  alt="Banner Oficial" 
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent flex items-end p-6">
+                  <div className="text-white">
+                    <span className="bg-emerald-500 text-slate-950 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md shadow-sm">
+                      Vote Agora
+                    </span>
+                    <h2 className="text-lg md:text-xl font-black font-display tracking-tight mt-1.5 drop-shadow-sm">
+                      Quem é o melhor Prata da Casa?
+                    </h2>
+                  </div>
+                </div>
               </div>
             ) : (
-              <form onSubmit={handlePhoneLogin} className="w-full flex flex-col gap-4 animate-fade-in">
+              <div className="bg-gradient-to-r from-slate-900 to-slate-850 p-6 md:p-8 text-white relative">
+                <div className="absolute top-4 right-4 w-12 h-12 bg-white/5 rounded-full blur-lg"></div>
+                <span className="bg-emerald-500 text-slate-950 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md">
+                  Votação Oficial
+                </span>
+                <h2 className="text-xl md:text-2xl font-black font-display tracking-tight mt-2.5">
+                  Quem é o melhor Prata da Casa?
+                </h2>
+                <p className="text-slate-300 text-xs mt-1.5 leading-relaxed">
+                  Vote no melhor prata da casa das equipes finalistas (Azuup x Campinense) do Campeonato Municipal de Morro do Chapéu - BA 2026!
+                </p>
+              </div>
+            )}
+
+            <div className="p-6 md:p-8">
+              {/* Informative text below banner/header */}
+              {hasBanner && (
+                <div className="mb-6 bg-slate-50 border border-slate-100 rounded-2xl p-4">
+                  <p className="text-slate-600 text-xs md:text-sm font-semibold text-center leading-relaxed">
+                    Escolha seu favorito entre as equipes finalistas do Campeonato Municipal de <strong className="text-slate-900">Morro do Chapéu - BA 2026</strong>!
+                  </p>
+                </div>
+              )}
+
+              <div className="text-center mb-6">
+                <h3 className="text-lg font-black text-slate-900 mb-1.5 font-display">Identifique-se para votar</h3>
+                <p className="text-slate-500 text-xs leading-relaxed max-w-xs mx-auto">
+                  Para garantir a segurança, validade e controle de apenas 1 voto diário por pessoa, insira seus dados.
+                </p>
+              </div>
+
+              {/* Login Form */}
+              <form onSubmit={handlePhoneLogin} className="space-y-4">
                 {phoneError && (
-                  <div className="p-3 bg-rose-50 border border-rose-200 text-rose-600 text-[11px] font-bold rounded-xl text-center leading-relaxed">
+                  <div className="p-3 bg-rose-50 border border-rose-200 text-rose-600 text-xs font-bold rounded-xl text-center leading-relaxed animate-fade-in">
                     {phoneError}
                   </div>
                 )}
+                
                 <div>
                   <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5 ml-1">
                     Seu Nome Completo
@@ -434,10 +640,10 @@ export default function App() {
                     <input
                       type="text"
                       required
-                      placeholder="Ex: João da Silva"
+                      placeholder="Digite seu nome e sobrenome"
                       value={voterNameInput}
                       onChange={(e) => setVoterNameInput(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-11 pr-4 text-sm text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-emerald-400 focus:bg-white transition-all font-medium"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-11 pr-4 text-sm text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-[var(--primary-theme-color)] focus:bg-white transition-all font-semibold"
                     />
                   </div>
                 </div>
@@ -451,35 +657,29 @@ export default function App() {
                     <input
                       type="tel"
                       required
-                      placeholder="Ex: (74) 99999-9999"
+                      placeholder="(74) 99999-9999"
                       value={voterPhoneInput}
                       onChange={(e) => setVoterPhoneInput(formatPhoneNumber(e.target.value))}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-11 pr-4 text-sm text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-emerald-400 focus:bg-white transition-all font-mono"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-11 pr-4 text-sm text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-[var(--primary-theme-color)] focus:bg-white transition-all font-mono font-bold"
                     />
                   </div>
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black py-3.5 px-4 rounded-xl shadow-xs transition-all hover:shadow-md hover:-translate-y-0.5 cursor-pointer text-sm uppercase tracking-widest mt-2"
+                  className="w-full hover:brightness-110 text-slate-950 font-black py-4 px-4 rounded-xl shadow-md transition-all hover:shadow-lg hover:-translate-y-0.5 cursor-pointer text-xs uppercase tracking-widest mt-4 text-center"
+                  style={{ backgroundColor: '#10b981' }} // Use Emerald green for the primary action to confirm
                 >
-                  Confirmar e Entrar
+                  Confirmar e Acessar Votação
                 </button>
               </form>
-            )}
-            
-            <div className="mt-8 flex items-center gap-2 text-xs font-bold text-slate-400 justify-center w-full pt-6 border-t border-slate-100">
-              <UserCheck className="w-4 h-4 text-emerald-500" />
-              <span>Apenas 1 voto por pessoa por dia</span>
+              
+              <div className="mt-8 flex items-center gap-2 text-[11px] font-black text-slate-400 justify-center w-full pt-5 border-t border-slate-100">
+                <UserCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+                <span>Apenas 1 voto por pessoa por dia</span>
+              </div>
             </div>
           </div>
-          
-          <button 
-             onClick={() => setView('admin')}
-             className="mt-6 text-xs font-bold text-slate-400 hover:text-blue-600 transition-colors uppercase tracking-wider bg-white/50 px-4 py-2 rounded-full hover:bg-white border border-transparent hover:border-blue-200 cursor-pointer"
-          >
-             Acesso Organizador
-          </button>
         </div>
       </div>
     );

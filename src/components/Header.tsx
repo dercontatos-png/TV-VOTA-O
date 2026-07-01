@@ -45,8 +45,19 @@ export default function Header({
             </div>
           </div>
           
-          {/* Admin Status Pill */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 self-start md:self-auto">
+          {/* Admin Status Pill & TV Logo */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 self-start md:self-auto">
+            {config?.logoPrincipal && (
+              <div className="bg-black/10 backdrop-blur-sm p-1.5 px-3 rounded-xl border border-white/10 shadow-md">
+                <img 
+                  src={config.logoPrincipal} 
+                  alt="TV Logo" 
+                  className="max-h-10 max-w-[130px] object-contain" 
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            )}
+
             {isAdmin && (
               <div className="flex items-center gap-2 bg-emerald-950/80 border border-emerald-500/30 px-3 py-1.5 rounded-xl text-[11px] font-bold text-emerald-300 shadow-xs">
                 <User className="w-3.5 h-3.5" />
