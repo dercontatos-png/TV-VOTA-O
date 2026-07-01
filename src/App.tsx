@@ -88,9 +88,11 @@ export default function App() {
   const [view, setView] = useState<'voting' | 'admin' | 'mural'>(isMuralParam ? 'mural' : (isAdminParam ? 'admin' : 'voting'));
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isVoting, setIsVoting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [votedPlayerName, setVotedPlayerName] = useState('');
+  const [voteError, setVoteError] = useState<string | null>(null);
 
   // IP & Location Tracking States
   const [ipAddress, setIpAddress] = useState<string>('');
@@ -254,55 +256,38 @@ export default function App() {
     }
   };
 
-  // Real-time synchronization for Players and System Config
-  useEffect(() => {
-    let unsubscribePlayers: () => void;
-    let unsubscribeConfig: () => void;
-
-    const setupRealtimeSubscriptions = async () => {
+    const fetchFreshData = async (showLoading = false) => {
+      if (showLoading) setLoading(true);
       try {
-        const { collection, query, orderBy, onSnapshot, doc } = await import('firebase/firestore');
-        const { db } = await import('./firebase');
+        const configData = await getSystemConfig();
+        const playersData = await getPlayers();
         
-        // Subscribe to system config
-        const configRef = doc(db, 'settings', 'voting');
-        unsubscribeConfig = onSnapshot(configRef, (docSnap) => {
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            import('./dbService').then(({ DEFAULT_CONFIG }) => {
-              setConfig({ ...DEFAULT_CONFIG, ...data } as SystemConfig);
-            });
-          } else {
-            import('./dbService').then(({ DEFAULT_CONFIG }) => setConfig(DEFAULT_CONFIG));
-          }
-        });
-
-        // Subscribe to players
-        const playersRef = collection(db, 'players');
-        unsubscribePlayers = onSnapshot(playersRef, (snapshot) => {
-          const playersData = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          } as Player));
-          
-          const sortedPlayers = [...playersData].sort((a, b) => (a.order || 0) - (b.order || 0));
-          setPlayers(sortedPlayers);
-          setLoading(false);
-        }, (error) => {
-          console.error("Snapshot error:", error);
-        });
-
-      } catch (err) {
-        console.error("Error setting up real-time sync:", err);
-        setLoading(false);
+        const sortedPlayers = [...playersData].sort((a, b) => (a.order || 0) - (b.order || 0));
+        setPlayers(sortedPlayers);
+        setConfig(configData);
+        setErrorMsg(null);
+      } catch (err: any) {
+        console.error("Error fetching data from API:", err);
+        setErrorMsg("Erro ao carregar dados. Verifique sua conexão.");
+      } finally {
+        if (showLoading) setLoading(false);
       }
     };
 
-    setupRealtimeSubscriptions();
+    // Poll players and system configuration from our server API (cached on server-side)
+  useEffect(() => {
+    let intervalId: any;
+
+    // Initial load
+    fetchFreshData(true);
+
+    // Poll every 10 seconds to keep the interface updated
+    intervalId = setInterval(() => {
+      fetchFreshData(false);
+    }, 10000);
 
     return () => {
-      if (unsubscribePlayers) unsubscribePlayers();
-      if (unsubscribeConfig) unsubscribeConfig();
+      clearInterval(intervalId);
     };
   }, []);
 
@@ -338,9 +323,17 @@ export default function App() {
     }
   };
 
+  const handleRefreshAll = async () => {
+    await fetchFreshData(false);
+    await loadAppData();
+  };
+
   const handleUpdateConfig = async (newConfig: SystemConfig) => {
     await updateSystemConfig(newConfig);
     setConfig(newConfig);
+    // Reload data when config changes
+    await fetchFreshData(true);
+    await loadAppData();
   };
 
   useEffect(() => {
@@ -408,9 +401,10 @@ export default function App() {
       setShowSuccessModal(true);
       setRecommendedPlayerId(null); // Clear recommended after successful vote
       
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to cast vote:", err);
-      alert("Não foi possível registrar seu voto. Por favor, tente novamente em instantes.");
+      const msg = err instanceof Error ? err.message : "Não foi possível registrar seu voto. Por favor, tente novamente em instantes.";
+      setVoteError(msg);
     } finally {
       setIsVoting(false);
     }
@@ -640,7 +634,13 @@ export default function App() {
 
       {/* 2. Main Content Stage */}
       <main className="flex-grow pb-12">
-        {loading ? (
+        {errorMsg ? (
+          <div className="flex flex-col items-center justify-center min-h-[50vh] animate-fade-in p-6">
+            <ShieldAlert className="w-16 h-16 text-rose-500 mb-4" />
+            <h2 className="text-xl font-black text-slate-800 text-center uppercase tracking-wider mb-2">Erro ao carregar</h2>
+            <p className="text-sm font-medium text-slate-500 text-center max-w-md leading-relaxed">{errorMsg}</p>
+          </div>
+        ) : loading ? (
           <div className="flex flex-col items-center justify-center min-h-[50vh] animate-fade-in" id="loading-spinner">
             <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
             <p className="text-xs font-extrabold uppercase tracking-widest text-slate-400 mt-4">Carregando dados da votação...</p>
@@ -661,7 +661,7 @@ export default function App() {
         ) : view === 'admin' && adminUser ? (
           <AdminPanel 
             players={players} 
-            onRefresh={loadAppData} 
+            onRefresh={handleRefreshAll} 
             config={config} 
             onUpdateConfig={handleUpdateConfig} 
           />
@@ -717,7 +717,7 @@ export default function App() {
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50 p-4" id="auth-error-modal">
           <div className="bg-white rounded-[32px] p-6 md:p-8 max-w-sm w-full shadow-2xl relative border border-slate-100 text-center animate-scale-up">
             <button
-              onClick={() => setAuthError(null)}
+               onClick={() => setAuthError(null)}
               className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-950 bg-slate-50 hover:bg-slate-100 rounded-full transition-colors cursor-pointer border border-slate-100"
               aria-label="Fechar"
             >
@@ -742,6 +742,38 @@ export default function App() {
             <button
               onClick={() => setAuthError(null)}
               className="w-full py-3.5 px-4 rounded-2xl bg-slate-950 hover:bg-slate-905 text-white font-extrabold text-sm tracking-wide shadow-md hover:shadow-lg transition-all mt-6 cursor-pointer"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 6. Elegant Voting Error Modal */}
+      {voteError && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50 p-4" id="vote-error-modal">
+          <div className="bg-white rounded-[32px] p-6 md:p-8 max-w-sm w-full shadow-2xl relative border border-slate-100 text-center animate-scale-up">
+            <button
+              onClick={() => setVoteError(null)}
+              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-950 bg-slate-50 hover:bg-slate-100 rounded-full transition-colors cursor-pointer border border-slate-100"
+              aria-label="Fechar"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="w-16 h-16 bg-rose-50 border border-rose-100 rounded-full flex items-center justify-center mx-auto mb-4.5 text-rose-600 shadow-lg shadow-rose-500/5">
+              <ShieldAlert className="w-8 h-8 stroke-[2.2]" />
+            </div>
+
+            <h3 className="text-xl font-display font-black text-slate-950 tracking-tight">Não foi possível votar</h3>
+            
+            <p className="text-sm text-slate-500 mt-3 leading-relaxed font-semibold">
+              {voteError}
+            </p>
+
+            <button
+              onClick={() => setVoteError(null)}
+              className="w-full py-3.5 px-4 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-sm tracking-wide shadow-md hover:shadow-lg transition-all mt-6 cursor-pointer"
             >
               Entendido
             </button>

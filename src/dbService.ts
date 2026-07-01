@@ -1,75 +1,14 @@
-import { 
-  collection, 
-  doc, 
-  getDoc,
-  getDocs, 
-  setDoc, 
-  updateDoc, 
-  deleteDoc, 
-  query, 
-  where, 
-  orderBy, 
-  limit, 
-  increment, 
-  runTransaction, 
-  Timestamp, 
-  writeBatch
-} from 'firebase/firestore';
-import { db } from './firebase';
 import { Player, Vote, SystemConfig } from './types';
+import { castVoteInSupabase, hasVotedTodayInSupabase, getVotesFromSupabase } from './supabase';
 
-// Operation Types for error classification
-export enum OperationType {
-  CREATE = 'create',
-  UPDATE = 'update',
-  DELETE = 'delete',
-  LIST = 'list',
-  GET = 'get',
-  WRITE = 'write',
-}
+const API_BASE = '/api';
 
-// Firestore Error Info Interface for strict diagnostics
-export interface FirestoreErrorInfo {
-  error: string;
-  operationType: OperationType;
-  path: string | null;
-  authInfo: {
-    userId?: string | null;
-    email?: string | null;
-    emailVerified?: boolean | null;
-    isAnonymous?: boolean | null;
-    tenantId?: string | null;
-    providerInfo?: {
-      providerId?: string | null;
-      email?: string | null;
-    }[];
-  }
-}
+// Cache of the last reset time, initialized from localStorage if in a browser context
+const storedReset = typeof window !== 'undefined' ? localStorage.getItem('craque_last_reset') : null;
+let lastResetAtCache: number | undefined = storedReset ? parseInt(storedReset, 10) : undefined;
 
-// Global robust error parser/reporter conforming to the Firebase Skill
-function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): never {
-  const errMessage = error instanceof Error ? error.message : String(error);
-  const errInfo: FirestoreErrorInfo = {
-    error: errMessage,
-    authInfo: {
-      userId: null,
-      email: null,
-      emailVerified: null,
-      isAnonymous: null,
-      tenantId: null,
-      providerInfo: []
-    },
-    operationType,
-    path
-  };
-  console.error('Firestore Error details: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
-}
-
-// Helper to get today's date string in Morro do Chapéu / Bahia time (UTC-3)
 export function getBahiaDateStr(): string {
   const d = new Date();
-  // Adjust to UTC-3
   const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
   const bahiaDate = new Date(utc + (3600000 * -3));
   
@@ -80,294 +19,165 @@ export function getBahiaDateStr(): string {
   return `${year}-${month}-${day}`;
 }
 
-const PREDEFINED_PLAYERS = [
-  { name: 'Jefinho', team: 'AZUUP', position: 'MEI (Meia)' },
-  { name: 'Didio', team: 'AZUUP', position: 'MEI-ATAC (Meia-Atacante)' },
-  { name: 'Gabriel', team: 'AZUUP', position: 'LAT (Lateral)' },
-  { name: 'Valdevando', team: 'AZUUP', position: 'LAT (Lateral)' },
-  { name: 'Kauê', team: 'AZUUP', position: 'GOLEIRO' },
-  { name: 'Marcel', team: 'Campinense', position: 'LAT (Lateral)' },
-  { name: 'Sujeirinha', team: 'Campinense', position: 'MEI-ATAC (Meia-Atacante)' },
-  { name: 'Peep', team: 'Campinense', position: 'VOL (Volante)' },
-  { name: 'Rafael', team: 'Campinense', position: 'LAT (Lateral)' },
-  { name: 'Leuzinho', team: 'Campinense', position: 'VOL (Volante)' }
-];
-
-async function seedPredefinedPlayers() {
-  try {
-    const playersCol = collection(db, 'players');
-    for (const p of PREDEFINED_PLAYERS) {
-      const newPlayerRef = doc(playersCol);
-      const newPlayer: Omit<Player, 'id'> = {
-        name: p.name,
-        team: p.team,
-        position: p.position,
-        imageUrl: '',
-        votesCount: 0,
-        createdAt: Date.now()
-      };
-      await setDoc(newPlayerRef, newPlayer);
-    }
-  } catch (err) {
-    console.error("Error seeding predefined players:", err);
-  }
-}
-
-// 1. Get all players ordered by votes desc, then by name
 export async function getPlayers(): Promise<Player[]> {
+  const res = await fetch(`${API_BASE}/players`);
+  if (!res.ok) throw new Error('Failed to fetch players');
+  const playersList: Player[] = await res.json();
+
   try {
-    const playersCol = collection(db, 'players');
-    let q = query(playersCol, orderBy('votesCount', 'desc'), orderBy('name', 'asc'));
-    let snapshot = await getDocs(q);
-    
-    if (snapshot.empty) {
-      await seedPredefinedPlayers();
-      snapshot = await getDocs(q);
-    }
-    
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    } as Player));
-  } catch (error) {
-    console.warn("Sorting index query failed, falling back to client-side sorting:", error);
-    try {
-      const playersCol = collection(db, 'players');
-      let snapshot = await getDocs(playersCol);
-      
-      if (snapshot.empty) {
-        await seedPredefinedPlayers();
-        snapshot = await getDocs(playersCol);
-      }
-      
-      const list = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Player));
-      return list.sort((a, b) => {
-        if (b.votesCount !== a.votesCount) {
-          return b.votesCount - a.votesCount;
+    // Dynamically retrieve real-time votes from Supabase and count them in-memory
+    const votes = await getVotesFromSupabase();
+    const countsMap: Record<string, number> = {};
+    for (const v of votes) {
+      if (v && v.player_id) {
+        // Filter out votes older than lastResetAt timestamp
+        if (lastResetAtCache && v.created_at) {
+          const voteTime = new Date(v.created_at).getTime();
+          if (voteTime < lastResetAtCache) {
+            continue; // Skip votes cast before the reset
+          }
         }
-        return a.name.localeCompare(b.name);
-      });
-    } catch (fallbackErr) {
-      handleFirestoreError(fallbackErr, OperationType.LIST, 'players');
-    }
-  }
-}
-
-// 2. Add a new player
-export async function addPlayer(name: string, team: string, position?: string, imageUrl?: string, imageFit?: 'cover'|'contain', imagePosition?: 'top'|'center'|'bottom', order?: number): Promise<string> {
-  try {
-    const playersCol = collection(db, 'players');
-    const newPlayerRef = doc(playersCol); // Auto ID
-    
-    const newPlayer: Omit<Player, 'id'> = {
-      name,
-      team,
-      position: position || '',
-      imageUrl: imageUrl || '',
-      imageFit: imageFit || 'cover',
-      imagePosition: imagePosition || 'top',
-      order: order || 0,
-      votesCount: 0,
-      createdAt: Date.now()
-    };
-    
-    await setDoc(newPlayerRef, newPlayer);
-    return newPlayerRef.id;
-  } catch (error) {
-    handleFirestoreError(error, OperationType.CREATE, 'players');
-  }
-}
-
-// 3. Update an existing player
-export async function updatePlayer(id: string, updates: Partial<Player>): Promise<void> {
-  try {
-    const playerRef = doc(db, 'players', id);
-    await updateDoc(playerRef, updates);
-  } catch (error) {
-    handleFirestoreError(error, OperationType.UPDATE, `players/${id}`);
-  }
-}
-
-// 4. Delete player and their related votes count (or just delete the player)
-export async function deletePlayer(id: string): Promise<void> {
-  try {
-    const playerRef = doc(db, 'players', id);
-    await deleteDoc(playerRef);
-  } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, `players/${id}`);
-  }
-}
-
-// 5. Check if voter has already voted today
-export async function hasVotedToday(voterId: string): Promise<{ voted: boolean; playerVotedId?: string }> {
-  try {
-    const dateStr = getBahiaDateStr();
-    const votesCol = collection(db, 'votes');
-    const q = query(
-      votesCol, 
-      where('voterId', '==', voterId), 
-      where('dateStr', '==', dateStr),
-      limit(1)
-    );
-    
-    const snapshot = await getDocs(q);
-    if (!snapshot.empty) {
-      const voteDoc = snapshot.docs[0].data() as Vote;
-      return { voted: true, playerVotedId: voteDoc.playerId };
-    }
-    return { voted: false };
-  } catch (error) {
-    console.error("Error checking vote state: ", error);
-    // Since check voting status should fail gracefully if no votes exist or first query
-    return { voted: false };
-  }
-}
-
-// 6. Cast a vote using a firestore transaction for reliability and concurrency
-export async function castVote(playerId: string, voterId: string, voterInfo?: import('./types').VoterInfo & { ipAddress?: string; locationInfo?: string }, userAgent?: string): Promise<void> {
-  try {
-    const dateStr = getBahiaDateStr();
-    const playerRef = doc(db, 'players', playerId);
-    const voteRef = doc(collection(db, 'votes')); // Auto generated vote ID
-    
-    await runTransaction(db, async (transaction) => {
-      const playerDoc = await transaction.get(playerRef);
-      if (!playerDoc.exists()) {
-        throw new Error("Player does not exist!");
+        countsMap[v.player_id] = (countsMap[v.player_id] || 0) + 1;
       }
-      
-      const currentVotes = playerDoc.data().votesCount || 0;
-      
-      // Set the vote document
-      transaction.set(voteRef, {
-        id: voteRef.id,
-        playerId,
-        voterId,
-        dateStr,
-        timestamp: Date.now(),
-        voterName: voterInfo?.name || 'Anônimo',
-        voterEmail: voterInfo?.email || '',
-        voterPhone: voterInfo?.phone || '',
-        ipAddress: voterInfo?.ipAddress || 'N/A',
-        locationInfo: voterInfo?.locationInfo || 'N/A',
-        userAgent: userAgent || 'N/A'
-      });
-      
-      // Increment player's vote
-      transaction.update(playerRef, {
-        votesCount: currentVotes + 1
-      });
-    });
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, 'votes_transaction');
+    }
+
+    // Merge Supabase vote count values over player objects
+    return playersList.map(p => ({
+      ...p,
+      votesCount: countsMap[p.id] || 0
+    }));
+  } catch (err) {
+    console.error("Error aggregating Supabase votes for players:", err);
+    return playersList;
   }
 }
 
-// 7. Get recent votes history for admin panel
+export async function addPlayer(name: string, team: string, position?: string, imageUrl?: string, imageFit?: 'cover'|'contain', imagePosition?: 'top'|'center'|'bottom', order?: number): Promise<string> {
+  const res = await fetch(`${API_BASE}/players`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, team, position, imageUrl, imageFit, imagePosition, order })
+  });
+  if (!res.ok) throw new Error('Failed to add player');
+  const data = await res.json();
+  return data.id;
+}
+
+export async function updatePlayer(id: string, updates: Partial<Player>): Promise<void> {
+  const res = await fetch(`${API_BASE}/players/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates)
+  });
+  if (!res.ok) throw new Error('Failed to update player');
+}
+
+export async function deletePlayer(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/players/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to delete player');
+}
+
+export async function hasVotedToday(voterId: string): Promise<{ voted: boolean; playerVotedId?: string }> {
+  // Query Supabase directly
+  return hasVotedTodayInSupabase(voterId, lastResetAtCache);
+}
+
+export async function castVote(
+  playerId: string, 
+  voterId: string, 
+  voterInfo?: import('./types').VoterInfo & { ipAddress?: string; locationInfo?: string }, 
+  userAgent?: string
+): Promise<void> {
+  // Cast vote directly in Supabase
+  await castVoteInSupabase(playerId, voterId, voterInfo || {}, userAgent, lastResetAtCache);
+}
+
 export async function getVotesHistory(limitCount = 10): Promise<Vote[]> {
   try {
-    const votesCol = collection(db, 'votes');
-    const q = query(votesCol, orderBy('timestamp', 'desc'), limit(limitCount));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => doc.data() as Vote);
-  } catch (error) {
-    console.warn("Votes history sorting index failed, falling back to client-side sorting:", error);
-    try {
-      const votesCol = collection(db, 'votes');
-      const snapshot = await getDocs(votesCol);
-      const votes = snapshot.docs.map(doc => doc.data() as Vote);
-      return votes.sort((a, b) => b.timestamp - a.timestamp).slice(0, limitCount);
-    } catch (fallbackErr) {
-      handleFirestoreError(fallbackErr, OperationType.LIST, 'votes');
-    }
+    // Query directly from Supabase for total transparency and live display
+    const { data, error } = await import('./supabase').then(m => {
+      let query = m.supabase.from('votos').select('*').order('created_at', { ascending: false });
+      return query.limit(limitCount);
+    });
+
+    if (error) throw error;
+
+    return (data || []).map(v => ({
+      id: String(v.id),
+      playerId: v.player_id,
+      voterId: v.voter_id,
+      dateStr: v.date_str,
+      timestamp: v.created_at ? new Date(v.created_at).getTime() : Date.now(),
+      voterName: v.voter_name || 'Anônimo',
+      voterEmail: v.voter_email || '',
+      voterPhone: v.voter_phone || '',
+      ipAddress: v.ip_address || 'N/A',
+      locationInfo: v.location_info || 'N/A',
+      userAgent: v.user_agent || 'N/A'
+    }));
+  } catch (err) {
+    console.error("Failed to fetch vote history from Supabase, falling back to server API:", err);
+    const res = await fetch(`${API_BASE}/votes/history?limit=${limitCount}`);
+    if (!res.ok) throw new Error('Failed to fetch history');
+    return res.json();
   }
 }
 
-// 7b. Get ALL votes from Firestore for statistics and voter frequency count
 export async function getAllVotes(): Promise<Vote[]> {
   try {
-    const votesCol = collection(db, 'votes');
-    const snapshot = await getDocs(votesCol);
-    return snapshot.docs.map(doc => doc.data() as Vote);
-  } catch (error) {
-    console.error("Error fetching all votes:", error);
-    return [];
+    // Query directly from Supabase
+    const { data, error } = await import('./supabase').then(m => {
+      let query = m.supabase.from('votos').select('*').order('created_at', { ascending: false });
+      return query;
+    });
+
+    if (error) throw error;
+
+    return (data || []).map(v => ({
+      id: String(v.id),
+      playerId: v.player_id,
+      voterId: v.voter_id,
+      dateStr: v.date_str,
+      timestamp: v.created_at ? new Date(v.created_at).getTime() : Date.now(),
+      voterName: v.voter_name || 'Anônimo',
+      voterEmail: v.voter_email || '',
+      voterPhone: v.voter_phone || '',
+      ipAddress: v.ip_address || 'N/A',
+      locationInfo: v.location_info || 'N/A',
+      userAgent: v.user_agent || 'N/A'
+    }));
+  } catch (err) {
+    console.error("Failed to fetch all votes from Supabase, falling back to server:", err);
+    const res = await fetch(`${API_BASE}/votes/all`);
+    if (!res.ok) throw new Error('Failed to fetch all votes');
+    return res.json();
   }
 }
 
-// 8. Reset all votes
 export async function resetAllVotes(): Promise<void> {
+  // Try to clear votes from Supabase using REST API (must be allowed by policy or RLS disabled/enabled)
   try {
-    // 1. Get all players
-    const playersCol = collection(db, 'players');
-    const playersSnapshot = await getDocs(playersCol);
-    
-    let batch = writeBatch(db);
-    let operationCount = 0;
-    
-    // Reset players votesCount to 0 and fix missing fields
-    for (const playerDoc of playersSnapshot.docs) {
-      const pData = playerDoc.data();
-      const updates: any = { votesCount: 0 };
-      
-      // Inject missing fields that security rules require
-      if (typeof pData.createdAt !== 'number') updates.createdAt = Date.now();
-      if (typeof pData.position !== 'string') updates.position = '';
-      if (typeof pData.imageUrl !== 'string') updates.imageUrl = '';
-      if (typeof pData.name !== 'string' || pData.name === '') updates.name = 'Desconhecido';
-      if (typeof pData.team !== 'string' || pData.team === '') updates.team = 'Desconhecido';
-      
-      batch.update(playerDoc.ref, updates);
-      operationCount++;
-      if (operationCount >= 400) {
-        await batch.commit();
-        batch = writeBatch(db);
-        operationCount = 0;
-      }
+    const { error } = await import('./supabase').then(m => 
+      m.supabase.from('votos').delete().neq('id', 0) // Delete all rows
+    );
+    if (error) {
+      console.warn("Supabase votes deletion failed (ignoring since we use time-based client reset filtering):", error);
     }
-    
-    if (operationCount > 0) {
-      await batch.commit();
-      batch = writeBatch(db);
-      operationCount = 0;
-    }
-    
-    // 2. Delete all votes (fetch in chunks and delete)
-    const votesCol = collection(db, 'votes');
-    let hasMoreVotes = true;
-    
-    while (hasMoreVotes) {
-      const votesQuery = query(votesCol, limit(400));
-      const votesSnapshot = await getDocs(votesQuery);
-      
-      if (votesSnapshot.empty) {
-        hasMoreVotes = false;
-        break;
-      }
-      
-      for (const voteDoc of votesSnapshot.docs) {
-        batch.delete(voteDoc.ref);
-        operationCount++;
-      }
-      
-      await batch.commit();
-      batch = writeBatch(db);
-      operationCount = 0;
-    }
-    
-    // Update system config to force clients to clear local storage
-    const configRef = doc(db, 'settings', 'voting');
-    await setDoc(configRef, { lastResetAt: Date.now() }, { merge: true });
-  } catch (error) {
-    console.error("Error in resetAllVotes:", error);
-    handleFirestoreError(error, OperationType.WRITE, 'batch_reset_all');
+  } catch (err) {
+    console.error("Exception clearing Supabase votes:", err);
+  }
+
+  // Also reset local/firebase fallbacks
+  const res = await fetch(`${API_BASE}/votes/reset`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to reset votes');
+
+  // Update local cache of lastResetAt to current timestamp so we immediately start filtering
+  lastResetAtCache = Date.now();
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('craque_last_reset', lastResetAtCache.toString());
   }
 }
 
-// 9. Get and Update system voting configuration
 export const DEFAULT_CONFIG: SystemConfig = {
   votingQuestion: 'Quem é o melhor "Prata da Casa"?',
   logoAzuup: '',
@@ -377,40 +187,40 @@ export const DEFAULT_CONFIG: SystemConfig = {
   endDate: '',
   votingEnabled: true,
   bannerUrl: '',
-  primaryColor: '#2563eb', // default blue-600 hex
+  primaryColor: '#2563eb',
   sponsorName: 'Lourival Junior',
   sponsorPrize: 'R$ 500',
-  sponsorLogoUrl: ''
+  sponsorLogoUrl: '',
 };
 
 export async function getSystemConfig(): Promise<SystemConfig> {
   try {
-    const configRef = doc(db, 'settings', 'voting');
-    const docSnap = await getDoc(configRef);
-    if (docSnap.exists()) {
-      const data = docSnap.data() || {};
-      let question = data.votingQuestion || '';
-      if (!question || question.includes('Craque do Campeonato') || question.includes('craque do campeonato')) {
-        question = DEFAULT_CONFIG.votingQuestion;
+    const res = await fetch(`${API_BASE}/settings`);
+    if (!res.ok) return DEFAULT_CONFIG;
+    const config: SystemConfig = await res.json();
+    if (config && typeof config.lastResetAt === 'number') {
+      lastResetAtCache = config.lastResetAt;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('craque_last_reset', config.lastResetAt.toString());
       }
-      return {
-        ...DEFAULT_CONFIG,
-        ...data,
-        votingQuestion: question
-      } as SystemConfig;
     }
-    return DEFAULT_CONFIG;
+    return config;
   } catch (error) {
-    console.warn("Failed to get system config, returning default:", error);
     return DEFAULT_CONFIG;
   }
 }
 
 export async function updateSystemConfig(config: SystemConfig): Promise<void> {
-  try {
-    const configRef = doc(db, 'settings', 'voting');
-    await setDoc(configRef, config);
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, 'settings/voting');
+  const res = await fetch(`${API_BASE}/settings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config)
+  });
+  if (!res.ok) throw new Error('Failed to update config');
+  if (config && typeof config.lastResetAt === 'number') {
+    lastResetAtCache = config.lastResetAt;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('craque_last_reset', config.lastResetAt.toString());
+    }
   }
 }

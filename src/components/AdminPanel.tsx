@@ -209,14 +209,14 @@ const ExportNodeFeed = ({ config, totalVotes, players }: any) => {
             <h1 style={{ fontSize: '90px', fontWeight: 900, color: '#ffffff', textTransform: 'uppercase', margin: '-10px 0 10px 0', letterSpacing: '2px', textShadow: '0 4px 0px #00509e, 0 8px 0px #003366, 0 12px 20px rgba(0,0,0,0.8)' }}>
               VOTAÇÃO
             </h1>
-            <div style={{ background: 'rgba(255, 255, 255, 0.1)', border: '2px solid rgba(255, 255, 255, 0.5)', borderRadius: '16px', padding: '12px 30px', display: 'flex', alignItems: 'center', gap: '20px', backdropFilter: 'blur(10px)', boxShadow: '0 0 20px rgba(255, 255, 255, 0.2)' }}>
+            <div style={{ background: 'rgba(255, 255, 255, 0.1)', border: '2px solid rgba(255, 255, 255, 0.5)', borderRadius: '16px', padding: '12px 30px', display: 'flex', alignItems: 'center', gap: '20px', backdropFilter: 'blur(10px)', boxShadow: '0 0 20px rgba(255, 255, 255, 0.2)', marginBottom: '24px' }}>
               <span style={{ fontSize: '20px', color: 'white', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '2px' }}>TOTAL DE VOTOS</span>
               <div style={{ width: '2px', height: '30px', backgroundColor: 'rgba(255, 255, 255, 0.5)' }}></div>
               <span style={{ fontSize: '40px', fontWeight: 900, color: '#ffffff', fontFamily: 'monospace' }}>{totalVotes.toLocaleString('pt-BR')}</span>
             </div>
 
             {config?.sponsorName && (
-               <div style={{ marginTop: '16px', background: 'rgba(255, 255, 255, 0.1)', border: '2px solid rgba(255, 255, 255, 0.5)', borderRadius: '16px', padding: '12px 32px', display: 'flex', flexDirection: 'column', alignItems: 'center', backdropFilter: 'blur(10px)', boxShadow: '0 0 20px rgba(255, 255, 255, 0.2)' }}>
+               <div style={{ background: 'rgba(255, 255, 255, 0.1)', border: '2px solid rgba(255, 255, 255, 0.5)', borderRadius: '16px', padding: '12px 32px', display: 'flex', flexDirection: 'column', alignItems: 'center', backdropFilter: 'blur(10px)', boxShadow: '0 0 20px rgba(255, 255, 255, 0.2)' }}>
                  <span style={{ fontSize: '14px', fontWeight: 900, color: '#93c5fd', textTransform: 'uppercase', letterSpacing: '2px' }}>OFERECIMENTO</span>
                  <span style={{ fontSize: '24px', fontWeight: 900, color: 'white', textTransform: 'uppercase', margin: '2px 0', textAlign: 'center' }}>{config.sponsorName}</span>
                  {config.sponsorPrize && (
@@ -228,13 +228,13 @@ const ExportNodeFeed = ({ config, totalVotes, players }: any) => {
         </div>
 
         {/* Bottom Section: Bars */}
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', justifyContent: 'center', height: '320px', paddingBottom: '0' }}>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', justifyContent: 'center', height: '320px', paddingBottom: '0' }}>
           {[...players].sort((a: any, b: any) => b.votesCount - a.votesCount).slice(0, 10).map((player: any, index: number, arr: any[]) => {
             const topVotes = arr[0]?.votesCount || 1;
             const heightPercentage = Math.max(15, (player.votesCount / topVotes) * 100);
             
             return (
-              <div key={index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '85px', flexShrink: 0, justifyContent: 'flex-end', height: '100%' }}>
+              <div key={index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '75px', flexShrink: 0, justifyContent: 'flex-end', height: '100%' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '12px' }}>
                   <span style={{ fontSize: '28px', fontWeight: 900, color: '#ffffff', textShadow: '0 4px 15px rgba(0,0,0,0.8)' }}>
                     {player.votesCount}
@@ -244,11 +244,11 @@ const ExportNodeFeed = ({ config, totalVotes, players }: any) => {
                   </span>
                 </div>
                 
-                <div style={{ zIndex: 20, marginBottom: '-35px' }}>
+                <div style={{ zIndex: 20, marginBottom: '-30px' }}>
                   {player.imageUrl ? (
-                    <img crossOrigin="anonymous" src={player.imageUrl} style={{ width: '75px', height: '75px', borderRadius: '50%', objectFit: 'cover', border: '3px solid white', backgroundColor: '#020617', boxShadow: '0 0 15px rgba(255, 255, 255, 0.5)' }} />
+                    <img crossOrigin="anonymous" src={player.imageUrl} style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover', border: '3px solid white', backgroundColor: '#020617', boxShadow: '0 0 15px rgba(255, 255, 255, 0.5)' }} />
                   ) : (
-                    <div style={{ width: '75px', height: '75px', borderRadius: '50%', backgroundColor: '#020617', border: '3px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', fontWeight: 900, color: 'white', boxShadow: '0 0 15px rgba(255, 255, 255, 0.5)' }}>
+                    <div style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: '#020617', border: '3px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', fontWeight: 900, color: 'white', boxShadow: '0 0 15px rgba(255, 255, 255, 0.5)' }}>
                       {player.name.substring(0, 2).toUpperCase()}
                     </div>
                   )}
@@ -440,10 +440,15 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
   const [votesHistory, setVotesHistory] = useState<Vote[]>([]);
   const [allVotes, setAllVotes] = useState<Vote[]>([]);
 
+  // Campaign Management states
+  const [newCampaignName, setNewCampaignName] = useState('');
+  const [isCreatingCampaign, setIsCreatingCampaign] = useState(false);
+
   const [selectedPlayerLink, setSelectedPlayerLink] = useState('');
   const [generatedLink, setGeneratedLink] = useState(window.location.origin + '?vote=true');
   const [linkCopied, setLinkCopied] = useState(false);
   const [showResetConfirmModal, setShowResetConfirmModal] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   // Drag and Drop ordering state removed
   const handleCopyGeneratedLink = () => {
@@ -455,7 +460,11 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
     });
   };
 
-  const sortedPlayers = [...players].sort((a, b) => (a.order || 0) - (b.order || 0));
+  const sortedPlayers = [...players].sort((a, b) => {
+    const oA = typeof a.order === 'number' && a.order > 0 ? a.order : 9999;
+    const oB = typeof b.order === 'number' && b.order > 0 ? b.order : 9999;
+    return oA - oB;
+  });
 
   const handleMoveUp = async (index: number) => {
     if (index === 0) return;
@@ -465,14 +474,14 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
     newPlayers[index - 1] = temp;
 
     try {
-      const updates = newPlayers.map((player, idx) => {
+      // Execute sequentially to avoid race conditions in local JSON DB
+      for (let idx = 0; idx < newPlayers.length; idx++) {
+        const player = newPlayers[idx];
         const newOrder = idx + 1;
         if (player.order !== newOrder) {
-          return updatePlayer(player.id, { order: newOrder });
+          await updatePlayer(player.id, { order: newOrder });
         }
-        return Promise.resolve();
-      });
-      await Promise.all(updates);
+      }
       onRefresh();
     } catch (err) {
       console.error("Error updating order", err);
@@ -487,14 +496,14 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
     newPlayers[index + 1] = temp;
 
     try {
-      const updates = newPlayers.map((player, idx) => {
+      // Execute sequentially to avoid race conditions in local JSON DB
+      for (let idx = 0; idx < newPlayers.length; idx++) {
+        const player = newPlayers[idx];
         const newOrder = idx + 1;
         if (player.order !== newOrder) {
-          return updatePlayer(player.id, { order: newOrder });
+          await updatePlayer(player.id, { order: newOrder });
         }
-        return Promise.resolve();
-      });
-      await Promise.all(updates);
+      }
       onRefresh();
     } catch (err) {
       console.error("Error updating order", err);
@@ -630,7 +639,8 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
 
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height);
-          const dataUrl = canvas.toDataURL('image/png');
+          // Converter para WebP com compressão de 0.8 para ficar super leve mantendo transparência
+          const dataUrl = canvas.toDataURL('image/webp', 0.8);
           applyLogo(dataUrl);
         } else {
           applyLogo(reader.result as string);
@@ -675,7 +685,8 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          // Converter para WebP para máxima compressão
+          const dataUrl = canvas.toDataURL('image/webp', 0.8);
           setBannerUrl(dataUrl);
         } else {
           setBannerUrl(reader.result as string);
@@ -721,7 +732,8 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          // Converter para WebP para máxima compressão
+          const dataUrl = canvas.toDataURL('image/webp', 0.8);
           setImageUrl(dataUrl);
         } else {
           setImageUrl(reader.result as string);
@@ -841,12 +853,14 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
 
   const executeResetVotes = async () => {
     try {
+      setResetError(null);
       await resetAllVotes();
       setOperationMsg({ type: 'success', text: 'A votação foi zerada com sucesso!' });
       setShowResetConfirmModal(false);
       onRefresh();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setResetError(err.message || 'Erro ao zerar os votos.');
       setOperationMsg({ type: 'error', text: 'Erro ao zerar os votos.' });
     }
   };
@@ -1259,7 +1273,10 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
           </div>
           <button
             id="reset-votes-btn"
-            onClick={() => setShowResetConfirmModal(true)}
+            onClick={() => {
+              setResetError(null);
+              setShowResetConfirmModal(true);
+            }}
             className="flex items-center justify-center gap-1.5 text-xs font-black uppercase tracking-wider text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-100 hover:border-rose-600 px-4 py-2.5 rounded-2xl transition-all mt-3 cursor-pointer w-full text-center"
           >
             <RefreshCw className="w-3.5 h-3.5" />
@@ -1933,6 +1950,12 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
             <p className="text-sm text-slate-500 mt-3 leading-relaxed font-medium">
               Isso irá zerar <strong>TODOS</strong> os votos de forma irreversível. Todo o histórico será perdido.
             </p>
+
+            {resetError && (
+              <div className="mt-4 p-3.5 bg-rose-50 border border-rose-100 text-rose-900 text-xs rounded-2xl font-bold text-left leading-relaxed">
+                ⚠️ {resetError}
+              </div>
+            )}
 
             <div className="flex flex-col gap-3 mt-6">
               <button

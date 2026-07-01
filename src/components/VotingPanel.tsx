@@ -89,10 +89,14 @@ export default function VotingPanel({
     });
 
     // Order by manual 'order' if set, else alternate by team
-    const hasCustomOrder = result.some(p => p.order && p.order > 0);
+    const hasCustomOrder = result.some(p => typeof p.order === 'number' && p.order > 0);
     
     if (hasCustomOrder && selectedTeam === 'Todos') {
-      result.sort((a, b) => (a.order || 9999) - (b.order || 9999));
+      result.sort((a, b) => {
+        const oA = typeof a.order === 'number' && a.order > 0 ? a.order : 9999;
+        const oB = typeof b.order === 'number' && b.order > 0 ? b.order : 9999;
+        return oA - oB;
+      });
     } else if (selectedTeam === 'Todos') {
       // Alternate teams for fairness
       const teamGroups: Record<string, Player[]> = {};

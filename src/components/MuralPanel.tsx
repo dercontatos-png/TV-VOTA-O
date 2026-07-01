@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Player, SystemConfig } from '../types';
-import { DEFAULT_CONFIG } from '../dbService';
-import { db } from '../firebase';
-import { collection, onSnapshot, query, orderBy, doc } from 'firebase/firestore';
+import { DEFAULT_CONFIG, getPlayers, getSystemConfig } from '../dbService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Cell, Tooltip } from 'recharts';
 import { Trophy, Users } from 'lucide-react';
 
@@ -17,7 +15,6 @@ export function MuralPanel({ staticPlayers, staticConfig }: MuralPanelProps = {}
   const [totalVotes, setTotalVotes] = useState(staticPlayers ? staticPlayers.reduce((sum, p) => sum + p.votesCount, 0) : 0);
 
   useEffect(() => {
-    // If static data is provided, skip Firestore listeners
     if (staticPlayers && staticConfig) {
       setPlayers(staticPlayers);
       setConfig(staticConfig);
@@ -25,39 +22,31 @@ export function MuralPanel({ staticPlayers, staticConfig }: MuralPanelProps = {}
       return;
     }
 
-    // Real-time listener for players
-    const playersRef = collection(db, 'players');
-    const q = query(playersRef, orderBy('votesCount', 'desc'), orderBy('name', 'asc'));
-    
-    const unsubscribePlayers = onSnapshot(q, (snapshot) => {
-      const playersData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Player));
-      
-      const sortedPlayers = [...playersData].sort((a, b) => (a.order || 0) - (b.order || 0));
-      setPlayers(sortedPlayers);
-      setTotalVotes(playersData.reduce((sum, p) => sum + p.votesCount, 0));
-    }, (error) => {
-      console.error("Mural players listener error:", error);
-    });
-
-    // Real-time listener for config
-    const configRef = doc(db, 'settings', 'voting');
-    const unsubscribeConfig = onSnapshot(configRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setConfig(prev => ({ ...prev, ...data }));
+    const loadData = async () => {
+      try {
+        const [playersData, configData] = await Promise.all([
+          getPlayers(),
+          getSystemConfig()
+        ]);
+        const sortedPlayers = [...playersData].sort((a, b) => (a.order || 0) - (b.order || 0));
+        setPlayers(sortedPlayers);
+        setConfig(configData);
+        setTotalVotes(playersData.reduce((sum, p) => sum + p.votesCount, 0));
+      } catch (error) {
+        console.error("Mural load error:", error);
       }
-    }, (error) => {
-      console.error("Mural config listener error:", error);
-    });
+    };
+
+    // Initial load
+    loadData();
+
+    // Poll every 5 seconds for the live mural TV display
+    const interval = setInterval(loadData, 5000);
 
     return () => {
-      unsubscribePlayers();
-      unsubscribeConfig();
+      clearInterval(interval);
     };
-  }, []);
+  }, [staticPlayers, staticConfig]);
 
   // Format data for Recharts (Show top 10 players)
   const chartData = [...players]
