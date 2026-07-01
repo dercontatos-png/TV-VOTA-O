@@ -82,7 +82,7 @@ export default function App() {
   const urlParams = new URLSearchParams(window.location.search);
   const isAdminParam = urlParams.has('admin') || window.location.hash === '#admin';
   const isSharedLink = urlParams.has('vote') || urlParams.has('player') || urlParams.has('p');
-  const isMuralParam = urlParams.has('mural');
+  const isMuralParam = urlParams.get('view') === 'mural' || urlParams.has('mural');
 
   const [view, setView] = useState<'voting' | 'admin' | 'mural'>(isMuralParam ? 'mural' : (isAdminParam ? 'admin' : 'voting'));
   const [players, setPlayers] = useState<Player[]>([]);

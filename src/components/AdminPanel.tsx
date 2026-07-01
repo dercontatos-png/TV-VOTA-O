@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Plus, Edit2, Trash2, KeyRound, LogOut, RefreshCw, 
   Upload, Shield, FileImage, ClipboardList, Info, HelpCircle, Eye, Download,
-  Link, Copy, Check, Monitor, ExternalLink, GripVertical
+  Link, Copy, Check, Monitor, ExternalLink, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { Player, SystemConfig, Vote } from '../types';
 import { addPlayer, updatePlayer, deletePlayer, resetAllVotes, getVotesHistory, getAllVotes } from '../dbService';
@@ -66,9 +66,7 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
   const [generatedLink, setGeneratedLink] = useState(window.location.origin + '?vote=true');
   const [linkCopied, setLinkCopied] = useState(false);
 
-  // Drag and Drop ordering state
-  const [draggedPlayerIndex, setDraggedPlayerIndex] = useState<number | null>(null);
-
+  // Drag and Drop ordering state removed
   const handleCopyGeneratedLink = () => {
     navigator.clipboard.writeText(generatedLink).then(() => {
       setLinkCopied(true);
@@ -80,36 +78,35 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
 
   const sortedPlayers = [...players].sort((a, b) => (a.order || 0) - (b.order || 0));
 
-  const handlePlayerDragStart = (e: React.DragEvent, index: number) => {
-    setDraggedPlayerIndex(index);
-    if (e.dataTransfer) {
-      e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', index.toString());
-    }
-  };
-
-  const handlePlayerDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault(); 
-    if (e.dataTransfer) {
-      e.dataTransfer.dropEffect = 'move';
-    }
-  };
-
-  const handlePlayerDrop = async (e: React.DragEvent, targetIndex: number) => {
-    e.preventDefault();
-    const sourceIndex = draggedPlayerIndex;
-    
-    if (sourceIndex === null || sourceIndex === undefined || sourceIndex === targetIndex) {
-      setDraggedPlayerIndex(null);
-      return;
-    }
-
+  const handleMoveUp = async (index: number) => {
+    if (index === 0) return;
     const newPlayers = [...sortedPlayers];
-    const [draggedPlayer] = newPlayers.splice(sourceIndex, 1);
-    newPlayers.splice(targetIndex, 0, draggedPlayer);
+    const temp = newPlayers[index];
+    newPlayers[index] = newPlayers[index - 1];
+    newPlayers[index - 1] = temp;
 
-    setDraggedPlayerIndex(null);
-    
+    try {
+      const updates = newPlayers.map((player, idx) => {
+        const newOrder = idx + 1;
+        if (player.order !== newOrder) {
+          return updatePlayer(player.id, { order: newOrder });
+        }
+        return Promise.resolve();
+      });
+      await Promise.all(updates);
+      onRefresh();
+    } catch (err) {
+      console.error("Error updating order", err);
+    }
+  };
+
+  const handleMoveDown = async (index: number) => {
+    if (index === sortedPlayers.length - 1) return;
+    const newPlayers = [...sortedPlayers];
+    const temp = newPlayers[index];
+    newPlayers[index] = newPlayers[index + 1];
+    newPlayers[index + 1] = temp;
+
     try {
       const updates = newPlayers.map((player, idx) => {
         const newOrder = idx + 1;
@@ -456,11 +453,7 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
   };
 
   const handleResetVotes = async () => {
-    const confirmation = prompt(
-      `ATENÇÃO: Isso irá zerar TODOS os votos de forma irreversível!\nDigite "ZERAR" para confirmar:`
-    );
-    
-    if (confirmation === 'ZERAR') {
+    if (confirm("ATENÇÃO: Isso irá zerar TODOS os votos de forma irreversível!\nTem certeza que deseja continuar?")) {
       try {
         await resetAllVotes();
         setOperationMsg({ type: 'success', text: 'A votação foi zerada com sucesso!' });
@@ -1325,17 +1318,29 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
                 <tbody className="divide-y divide-gray-100 text-sm">
                   {sortedPlayers.map((player, index) => (
                     <tr 
-                      key={player.id} 
-                      draggable 
-                      onDragStart={(e) => handlePlayerDragStart(e, index)}
-                      onDragEnter={(e) => e.preventDefault()}
-                      onDragOver={(e) => handlePlayerDragOver(e, index)}
-                      onDrop={(e) => handlePlayerDrop(e, index)}
-                      className={`transition-colors cursor-move ${draggedPlayerIndex === index ? 'opacity-50 bg-gray-100' : 'hover:bg-gray-50/50'}`}
+                      key={player.id}
+                      className="transition-colors hover:bg-gray-50/50"
                     >
                       <td className="py-3">
                         <div className="flex items-center gap-3">
-                          <GripVertical className="w-4 h-4 text-gray-400 shrink-0" />
+                          <div className="flex flex-col gap-1 items-center justify-center shrink-0 w-6">
+                            <button 
+                              type="button" 
+                              onClick={() => handleMoveUp(index)} 
+                              disabled={index === 0}
+                              className={`p-0.5 rounded cursor-pointer ${index === 0 ? 'text-gray-200' : 'text-gray-400 hover:text-emerald-600 hover:bg-emerald-50'}`}
+                            >
+                              <ArrowUp className="w-4 h-4" />
+                            </button>
+                            <button 
+                              type="button" 
+                              onClick={() => handleMoveDown(index)} 
+                              disabled={index === sortedPlayers.length - 1}
+                              className={`p-0.5 rounded cursor-pointer ${index === sortedPlayers.length - 1 ? 'text-gray-200' : 'text-gray-400 hover:text-emerald-600 hover:bg-emerald-50'}`}
+                            >
+                              <ArrowDown className="w-4 h-4" />
+                            </button>
+                          </div>
                           <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-gray-100 bg-gray-50 flex items-center justify-center">
                             {player.imageUrl ? <img src={player.imageUrl} className="w-full h-full object-cover" /> : <span className="text-xs text-emerald-700 font-bold">{player.name.slice(0, 2).toUpperCase()}</span>}
                           </div>
