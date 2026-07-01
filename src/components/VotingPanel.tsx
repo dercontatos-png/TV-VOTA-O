@@ -174,11 +174,13 @@ export default function VotingPanel({
         </div>
 
         {/* Voting Question / Question of the hour */}
-        <div className="relative z-10 w-full max-w-4xl mx-auto mt-2">
-          <div className="bg-gradient-to-b from-white/10 to-white/5 border border-white/10 backdrop-blur-md rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-sky-400 to-blue-500"></div>
-            <h2 className="text-lg md:text-2xl lg:text-3xl font-display font-black tracking-tight text-white leading-tight md:leading-snug" id="question-text">
-              {config?.votingQuestion || 'Quem é o seu favorito para conquistar o título de melhor "Prata da Casa" do Campeonato Municipal de Morro do Chapéu 2026 - Azuup x Campinense'}
+        <div className="relative z-10 w-full max-w-4xl mx-auto mt-6 text-center px-4">
+          <div className="relative p-6 md:p-8 bg-gradient-to-b from-white/10 to-white/5 backdrop-blur-xl border border-white/10 rounded-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.3)]">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-transparent via-blue-400 to-transparent opacity-50"></div>
+            <h2 className="text-lg md:text-2xl lg:text-3xl font-display font-medium tracking-wide text-white leading-relaxed drop-shadow-lg" id="question-text">
+              <span className="text-blue-400 text-4xl leading-none inline-block align-top mr-2 opacity-60">"</span>
+              {config?.votingQuestion || 'Quem é o seu favorito para conquistar o título de melhor "Prata da Casa" do Campeonato Municipal de Morro do Chapéu 2026 - Azuup x Campinense?'}
+              <span className="text-blue-400 text-4xl leading-none inline-block align-bottom ml-2 opacity-60">"</span>
             </h2>
           </div>
         </div>

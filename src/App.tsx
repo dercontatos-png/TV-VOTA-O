@@ -20,10 +20,15 @@ function getOrCreateVoterId(): string {
 }
 
 export default function App() {
-  const [view, setView] = useState<'voting' | 'admin'>('voting');
+  const urlParams = new URLSearchParams(window.location.search);
+  const isSharedLink = urlParams.has('vote') || urlParams.has('player') || urlParams.has('p');
+
+  const [view, setView] = useState<'voting' | 'admin'>(isSharedLink ? 'voting' : 'admin');
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [isVoting, setIsVoting] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [votedPlayerName, setVotedPlayerName] = useState('');
 
   // Secure Admin Authentication State
   const [adminUser, setAdminUser] = useState<FirebaseUser | null>(null);
@@ -62,12 +67,9 @@ export default function App() {
     const pId = params.get('player') || params.get('p');
     if (pId) {
       setRecommendedPlayerId(pId);
+      setView('voting');
     }
   }, []);
-
-  // Confirmatory Success Modal State
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [votedPlayerName, setVotedPlayerName] = useState('');
 
   // Firebase Auth Observer to persist admin session
   useEffect(() => {
@@ -85,6 +87,10 @@ export default function App() {
           };
           setVoterInfo(vInfo);
           localStorage.setItem('craque_voter_info', JSON.stringify(vInfo));
+          
+          if (isSharedLink) {
+            setView('voting');
+          }
         }
       } else {
         setAdminUser(null);
@@ -92,12 +98,14 @@ export default function App() {
         // to be secure, if firebase says not logged in, we should clear it.
         setVoterInfo(null);
         localStorage.removeItem('craque_voter_info');
-        setView('voting');
+        if (isSharedLink) {
+          setView('voting');
+        }
       }
       setCheckingAdmin(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [isSharedLink]);
 
   // Generic Google Sign-In with popup trigger
   const handleGoogleLogin = async () => {
@@ -110,7 +118,11 @@ export default function App() {
         setAdminUser(user);
         setView('admin');
       } else {
-        // Handled by onAuthStateChanged, they become a voter
+        if (!isSharedLink && view === 'admin') {
+          setAuthError('Acesso Negado. Este painel é exclusivo para o organizador.');
+        } else {
+          setView('voting');
+        }
       }
     } catch (error: any) {
       console.error("Error signing in with Google:", error);
@@ -192,14 +204,12 @@ export default function App() {
     }
   };
 
-  const activeView = (view === 'admin' && adminUser) ? 'admin' : 'voting';
-
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900 selection:bg-emerald-500 selection:text-white" id="app-root-container">
       {/* 1. Header Navigation */}
       <Header 
         onNavigate={setView} 
-        currentView={activeView} 
+        currentView={view} 
         config={config} 
         isAdmin={!!adminUser}
         adminEmail={adminUser?.email}
@@ -213,7 +223,7 @@ export default function App() {
             <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
             <p className="text-xs font-extrabold uppercase tracking-widest text-slate-400 mt-4">Carregando dados da votação...</p>
           </div>
-        ) : activeView === 'voting' ? (
+        ) : view === 'voting' ? (
           <VotingPanel
             players={players}
             onVote={handleVote}
@@ -226,13 +236,32 @@ export default function App() {
             onLogin={handleGoogleLogin}
             onLogout={handleLogout}
           />
-        ) : (
+        ) : view === 'admin' && adminUser ? (
           <AdminPanel 
             players={players} 
             onRefresh={loadAppData} 
             config={config} 
             onUpdateConfig={handleUpdateConfig} 
           />
+        ) : (
+          <div className="flex flex-col items-center justify-center min-h-[50vh] animate-fade-in px-4">
+            <div className="bg-white p-8 rounded-3xl shadow-xl max-w-sm w-full text-center border border-slate-100">
+              <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <UserCheck className="w-8 h-8 stroke-[2]" />
+              </div>
+              <h2 className="text-xl font-black text-slate-900 mb-2 font-display">Área do Organizador</h2>
+              <p className="text-slate-500 text-sm mb-8 leading-relaxed">
+                Faça login com a conta Google do administrador para acessar o painel de controle e gerar os links de votação.
+              </p>
+              <button
+                onClick={handleGoogleLogin}
+                className="w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl shadow-sm transition-all hover:shadow-md cursor-pointer"
+              >
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+                <span>Entrar com o Google</span>
+              </button>
+            </div>
+          </div>
         )}
       </main>
 

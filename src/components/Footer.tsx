@@ -28,10 +28,6 @@ export default function Footer({ onNavigate, isAdmin, onLogin }: FooterProps) {
           <p className="text-sm text-slate-500 mt-1">
             Plataforma oficial de votação para o Melhor Prata da Casa das equipes finalistas.
           </p>
-          <div className="flex items-center gap-2 mt-3 text-xs justify-center md:justify-start text-blue-400 bg-blue-950/40 px-3 py-1.5 rounded-full w-fit">
-            <ShieldAlert className="w-4.5 h-4.5" />
-            <span>Limite de 1 voto por jogador, uma vez por dia por dispositivo.</span>
-          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -52,26 +48,6 @@ export default function Footer({ onNavigate, isAdmin, onLogin }: FooterProps) {
               </>
             )}
           </button>
-
-          {isAdmin ? (
-            <button
-              id="footer-admin-link"
-              onClick={() => onNavigate('admin')}
-              className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 hover:bg-slate-800 px-3.5 py-2 rounded-lg transition-colors cursor-pointer border border-blue-500/20 bg-blue-950/20"
-            >
-              <Key className="w-3.5 h-3.5 text-blue-400" />
-              <span>Painel Admin Liberado</span>
-            </button>
-          ) : (
-            <button
-              id="footer-admin-login-link"
-              onClick={onLogin}
-              className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-white hover:bg-slate-800 px-3.5 py-2 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-slate-700"
-            >
-              <Key className="w-3.5 h-3.5" />
-              <span>Área do Organizador</span>
-            </button>
-          )}
         </div>
       </div>
       
