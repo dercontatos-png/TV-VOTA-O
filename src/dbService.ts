@@ -157,7 +157,7 @@ export async function getPlayers(): Promise<Player[]> {
 }
 
 // 2. Add a new player
-export async function addPlayer(name: string, team: string, position?: string, imageUrl?: string): Promise<string> {
+export async function addPlayer(name: string, team: string, position?: string, imageUrl?: string, imageFit?: 'cover'|'contain', imagePosition?: 'top'|'center'|'bottom', order?: number): Promise<string> {
   try {
     const playersCol = collection(db, 'players');
     const newPlayerRef = doc(playersCol); // Auto ID
@@ -167,6 +167,9 @@ export async function addPlayer(name: string, team: string, position?: string, i
       team,
       position: position || '',
       imageUrl: imageUrl || '',
+      imageFit: imageFit || 'cover',
+      imagePosition: imagePosition || 'top',
+      order: order || 0,
       votesCount: 0,
       createdAt: Date.now()
     };
@@ -179,15 +182,10 @@ export async function addPlayer(name: string, team: string, position?: string, i
 }
 
 // 3. Update an existing player
-export async function updatePlayer(id: string, name: string, team: string, position?: string, imageUrl?: string): Promise<void> {
+export async function updatePlayer(id: string, updates: Partial<Player>): Promise<void> {
   try {
     const playerRef = doc(db, 'players', id);
-    await updateDoc(playerRef, {
-      name,
-      team,
-      position: position || '',
-      imageUrl: imageUrl || ''
-    });
+    await updateDoc(playerRef, updates);
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, `players/${id}`);
   }
@@ -329,7 +327,7 @@ export async function resetAllVotes(): Promise<void> {
 
 // 9. Get and Update system voting configuration
 export const DEFAULT_CONFIG: SystemConfig = {
-  votingQuestion: 'Quem é o seu favorito para conquistar o título de melhor "Prata da Casa" do Campeonato Municipal de Morro do Chapéu 2026 - Azuup x Campinense',
+  votingQuestion: 'Quem é o melhor "Prata da Casa"?',
   logoAzuup: '',
   logoCampinense: '',
   logoPrincipal: '',

@@ -14,7 +14,10 @@ service cloud.firestore {
           && data.position is string && data.position.size() <= 100
           && data.imageUrl is string && data.imageUrl.size() <= 3000000
           && data.votesCount is int
-          && data.createdAt is int;
+          && data.createdAt is int
+          && (!('imageFit' in data) || (data.imageFit is string && data.imageFit.size() <= 20))
+          && (!('imagePosition' in data) || (data.imagePosition is string && data.imagePosition.size() <= 20))
+          && (!('order' in data) || (data.order is number));
     }
 
     // Helper to check if a vote document is valid

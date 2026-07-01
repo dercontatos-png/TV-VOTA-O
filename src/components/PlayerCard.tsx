@@ -24,7 +24,7 @@ export default function PlayerCard({
 }: PlayerCardProps) {
   const [copied, setCopied] = useState(false);
   const [isZoomed, setIsZoomed] = useState(false);
-  const [fitMode, setFitMode] = useState<'cover' | 'contain'>('cover');
+  const [fitMode, setFitMode] = useState<'cover' | 'contain'>(player.imageFit || 'cover');
 
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -114,7 +114,11 @@ export default function PlayerCard({
                 src={player.imageUrl}
                 alt={player.name}
                 referrerPolicy="no-referrer"
-                className={`w-full h-full bg-slate-200 transition-transform duration-500 group-hover:scale-105 ${fitMode === 'cover' ? 'object-cover object-top' : 'object-contain'}`}
+                className={`w-full h-full bg-slate-200 transition-transform duration-500 group-hover:scale-105 ${
+                  fitMode === 'cover' 
+                    ? `object-cover ${player.imagePosition === 'bottom' ? 'object-bottom' : player.imagePosition === 'center' ? 'object-center' : 'object-top'}` 
+                    : 'object-contain'
+                }`}
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.display = 'none';
                 }}

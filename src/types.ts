@@ -4,6 +4,9 @@ export interface Player {
   team: string;
   position?: string;
   imageUrl?: string;
+  imageFit?: 'cover' | 'contain';
+  imagePosition?: 'top' | 'center' | 'bottom';
+  order?: number;
   votesCount: number;
   createdAt: number;
 }

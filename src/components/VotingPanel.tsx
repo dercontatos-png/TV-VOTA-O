@@ -84,15 +84,36 @@ export default function VotingPanel({
       return matchesSearch && matchesTeam;
     });
 
-    // Shuffle the array to be impartial, using a pseudo-random stable hash based on ID
-    result = [...result].sort((a, b) => {
-      const hash = (str: string) => {
-        let h = 0;
-        for (let i = 0; i < str.length; i++) h = Math.imul(31, h) + str.charCodeAt(i) | 0;
-        return h;
-      };
-      return hash(a.id) - hash(b.id);
-    });
+    // Order by manual 'order' if set, else alternate by team
+    const hasCustomOrder = result.some(p => p.order && p.order > 0);
+    
+    if (hasCustomOrder && selectedTeam === 'Todos') {
+      result.sort((a, b) => (a.order || 9999) - (b.order || 9999));
+    } else if (selectedTeam === 'Todos') {
+      // Alternate teams for fairness
+      const teamGroups: Record<string, Player[]> = {};
+      result.forEach(p => {
+        if (!teamGroups[p.team]) teamGroups[p.team] = [];
+        teamGroups[p.team].push(p);
+      });
+      
+      // Sort players within each team alphabetically
+      Object.values(teamGroups).forEach(group => group.sort((a,b) => a.name.localeCompare(b.name)));
+      
+      const teamNames = Object.keys(teamGroups);
+      const interleaved: Player[] = [];
+      const maxLen = Math.max(0, ...Object.values(teamGroups).map(g => g.length));
+      
+      for (let i = 0; i < maxLen; i++) {
+        for (const team of teamNames) {
+          if (teamGroups[team][i]) interleaved.push(teamGroups[team][i]);
+        }
+      }
+      result = interleaved;
+    } else {
+      // If a specific team is selected, just sort alphabetically
+      result.sort((a, b) => a.name.localeCompare(b.name));
+    }
 
     return result;
   }, [players, search, selectedTeam]);
@@ -186,7 +207,7 @@ export default function VotingPanel({
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-transparent via-blue-400 to-transparent opacity-50"></div>
             <h2 className="text-lg md:text-2xl lg:text-3xl font-display font-medium tracking-wide text-white leading-relaxed drop-shadow-lg" id="question-text">
               <span className="text-blue-400 text-4xl leading-none inline-block align-top mr-2 opacity-60">"</span>
-              {config?.votingQuestion || 'Quem é o seu favorito para conquistar o título de melhor "Prata da Casa" do Campeonato Municipal de Morro do Chapéu 2026 - Azuup x Campinense?'}
+              {config?.votingQuestion || 'Quem é o melhor "Prata da Casa"?'}
               <span className="text-blue-400 text-4xl leading-none inline-block align-bottom ml-2 opacity-60">"</span>
             </h2>
           </div>

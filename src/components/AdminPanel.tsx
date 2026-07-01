@@ -36,6 +36,9 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
   const [team, setTeam] = useState('');
   const [position, setPosition] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [imageFit, setImageFit] = useState<'cover'|'contain'>('cover');
+  const [imagePosition, setImagePosition] = useState<'top'|'center'|'bottom'>('top');
+  const [order, setOrder] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [operationMsg, setOperationMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -332,7 +335,15 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
 
     try {
       if (isEditing && editingPlayerId) {
-        await updatePlayer(editingPlayerId, name.trim(), team.trim(), position.trim(), imageUrl);
+        await updatePlayer(editingPlayerId, {
+          name: name.trim(),
+          team: team.trim(),
+          position: position.trim(),
+          imageUrl,
+          imageFit,
+          imagePosition,
+          order
+        });
         setOperationMsg({ type: 'success', text: 'Jogador atualizado com sucesso!' });
       } else {
         if (players.length >= 25) {
@@ -340,7 +351,7 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
           setIsSubmitting(false);
           return;
         }
-        await addPlayer(name.trim(), team.trim(), position.trim(), imageUrl);
+        await addPlayer(name.trim(), team.trim(), position.trim(), imageUrl, imageFit, imagePosition, order);
         setOperationMsg({ type: 'success', text: 'Jogador cadastrado com sucesso!' });
       }
 
@@ -360,6 +371,9 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
     setTeam('');
     setPosition('');
     setImageUrl('');
+    setImageFit('cover');
+    setImagePosition('top');
+    setOrder(0);
     setIsEditing(false);
     setEditingPlayerId(null);
   };
@@ -369,6 +383,9 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
     setTeam(player.team);
     setPosition(player.position || '');
     setImageUrl(player.imageUrl || '');
+    setImageFit(player.imageFit || 'cover');
+    setImagePosition(player.imagePosition || 'top');
+    setOrder(player.order || 0);
     setIsEditing(true);
     setEditingPlayerId(player.id);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1027,6 +1044,44 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
                   onChange={(e) => setImageUrl(e.target.value)}
                   className="w-full px-4 py-2 text-xs rounded-xl border border-gray-200 focus:border-emerald-500 focus:outline-hidden text-gray-800"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Ajuste da Foto</label>
+                  <select 
+                    value={imageFit} 
+                    onChange={(e) => setImageFit(e.target.value as 'cover'|'contain')}
+                    className="w-full px-4 py-2 text-xs rounded-xl border border-gray-200 focus:border-emerald-500 focus:outline-hidden text-gray-800"
+                  >
+                    <option value="cover">Preencher (Cover)</option>
+                    <option value="contain">Enquadrar (Contain)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Posição da Foto</label>
+                  <select 
+                    value={imagePosition} 
+                    onChange={(e) => setImagePosition(e.target.value as 'top'|'center'|'bottom')}
+                    className="w-full px-4 py-2 text-xs rounded-xl border border-gray-200 focus:border-emerald-500 focus:outline-hidden text-gray-800"
+                  >
+                    <option value="top">Topo (Rosto)</option>
+                    <option value="center">Centro</option>
+                    <option value="bottom">Base</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Ordem Manual (Opcional)</label>
+                <input
+                  type="number"
+                  placeholder="Ex: 1"
+                  value={order || ''}
+                  onChange={(e) => setOrder(parseInt(e.target.value) || 0)}
+                  className="w-full px-4 py-2 text-sm rounded-xl border border-gray-200 focus:border-emerald-500 focus:outline-hidden text-gray-800"
+                />
+                <span className="text-[9px] text-gray-400 mt-1 block">Se não preenchido (0), o sistema alternará jogadores de cada time.</span>
               </div>
 
               <div className="flex gap-2 pt-2">

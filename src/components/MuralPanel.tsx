@@ -81,7 +81,11 @@ export function MuralPanel() {
                     <img 
                       src={player.imageUrl} 
                       alt={player.name} 
-                      className={`w-full h-full ${isFirst ? 'object-cover object-top' : 'object-cover object-top'} transition-transform duration-1000`}
+                      className={`w-full h-full transition-transform duration-1000 ${
+                        player.imageFit === 'contain' 
+                          ? 'object-contain' 
+                          : `object-cover ${player.imagePosition === 'bottom' ? 'object-bottom' : player.imagePosition === 'center' ? 'object-center' : 'object-top'}`
+                      }`}
                       referrerPolicy="no-referrer"
                     />
                   ) : (
