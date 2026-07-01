@@ -1,7 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || "https://dvpnwzinajfqxmfylkiy.supabase.co";
-const supabaseAnonKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR2cG53emluYWpmcXhtZnlsa2l5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MTA0NzIsImV4cCI6MjA5ODQ4NjQ3Mn0.zyRm4dkQmthVvnKdg0fLT9KNm0pdHDqivbYRvxaO2hI";
+// Safe check for process environment in browser
+if (typeof window !== 'undefined' && !(window as any).process) {
+  (window as any).process = { env: {} };
+}
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "https://dvpnwzinajfqxmfylkiy.supabase.co";
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR2cG53emluYWpmcXhtZnlsa2l5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MTA0NzIsImV4cCI6MjA5ODQ4NjQ3Mn0.zyRm4dkQmthVvnKdg0fLT9KNm0pdHDqivbYRvxaO2hI";
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
@@ -150,10 +155,36 @@ export async function deleteVoteInSupabase(voteId: string): Promise<void> {
   }
 }
 
+let resolvedPlayersTable: string | null = null;
+
+export async function getPlayersTableName(): Promise<string> {
+  if (resolvedPlayersTable) return resolvedPlayersTable;
+  
+  try {
+    const { error } = await supabase.from('jogadores').select('id').limit(1);
+    if (!error) {
+      resolvedPlayersTable = 'jogadores';
+      return 'jogadores';
+    }
+  } catch (e) {}
+  
+  try {
+    const { error } = await supabase.from('cara').select('id').limit(1);
+    if (!error) {
+      resolvedPlayersTable = 'cara';
+      return 'cara';
+    }
+  } catch (e) {}
+  
+  // Default to 'jogadores'
+  return 'jogadores';
+}
+
 export async function getPlayersFromSupabase() {
   try {
+    const tableName = await getPlayersTableName();
     const { data, error } = await supabase
-      .from('cara')
+      .from(tableName)
       .select('*')
       .neq('id', 'configuracao_do_sistema');
     
@@ -170,6 +201,7 @@ export async function getPlayersFromSupabase() {
 
 export async function upsertPlayerInSupabase(player: any) {
   try {
+    const tableName = await getPlayersTableName();
     // Serialize extra fields into the logo_url field to preserve them under basic table schema
     const logoUrlData = JSON.stringify({
       url: player.imageUrl || '',
@@ -180,7 +212,7 @@ export async function upsertPlayerInSupabase(player: any) {
     });
 
     const { error } = await supabase
-      .from('cara')
+      .from(tableName)
       .upsert([
         {
           id: player.id,
@@ -202,8 +234,9 @@ export async function upsertPlayerInSupabase(player: any) {
 
 export async function deletePlayerInSupabase(id: string) {
   try {
+    const tableName = await getPlayersTableName();
     const { error } = await supabase
-      .from('cara')
+      .from(tableName)
       .delete()
       .eq('id', id);
     if (error) {
@@ -237,10 +270,11 @@ export async function getSettingsFromSupabase() {
     // Silently proceed to fallback
   }
 
-  // 2. Fallback to 'cara' table with id 'configuracao_do_sistema'
+  // 2. Fallback to players table with id 'configuracao_do_sistema'
   try {
+    const tableName = await getPlayersTableName();
     const { data, error } = await supabase
-      .from('cara')
+      .from(tableName)
       .select('*')
       .eq('id', 'configuracao_do_sistema')
       .single();
@@ -282,10 +316,11 @@ export async function upsertSettingsInSupabase(settings: any) {
     // Silently proceed
   }
 
-  // 2. Fallback / Sync with 'cara' table (stores in 'nome' column as serialized JSON)
+  // 2. Fallback / Sync with players table (stores in 'nome' column as serialized JSON)
   try {
+    const tableName = await getPlayersTableName();
     const { error } = await supabase
-      .from('cara')
+      .from(tableName)
       .upsert([
         {
           id: 'configuracao_do_sistema',

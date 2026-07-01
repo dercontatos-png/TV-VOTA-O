@@ -52,53 +52,79 @@ export async function getPlayers(): Promise<Player[]> {
 
     // 1. Fetch directly from Supabase for Netlify static hosting
     const supabasePlayers = await getPlayersFromSupabase();
-    if (supabasePlayers.length === 0) {
-      // Seed predefined players to Supabase if it's completely empty
-      for (const p of DEFAULT_PLAYERS) {
-        await upsertPlayerInSupabase({
-          id: p.id,
-          name: p.name,
-          team: p.team,
-          imageUrl: p.imageUrl || '',
-          createdAt: Date.now()
-        });
-      }
-      playersList = [...DEFAULT_PLAYERS];
-    } else {
-      playersList = supabasePlayers.map((p: any) => {
-        let imageUrl = p.logo_url || '';
-        let position = '';
-        let imageFit = 'cover' as 'cover' | 'contain';
-        let imagePosition = 'top' as 'top' | 'center' | 'bottom';
-        let order = 0;
-
-        if (p.logo_url && p.logo_url.startsWith('{')) {
-          try {
-            const parsed = JSON.parse(p.logo_url);
-            imageUrl = parsed.url || '';
-            position = parsed.position || '';
-            imageFit = parsed.imageFit || 'cover';
-            imagePosition = parsed.imagePosition || 'top';
-            order = typeof parsed.order === 'number' ? parsed.order : 0;
-          } catch (e) {
-            // fallback
-          }
+    
+    // Auto-seed any missing default players to the database
+    const existingIds = new Set(supabasePlayers.map((p: any) => p.id));
+    const missingPlayers = DEFAULT_PLAYERS.filter(p => !existingIds.has(p.id));
+    
+    if (missingPlayers.length > 0) {
+      console.log(`Seeding ${missingPlayers.length} missing players to Supabase...`);
+      for (const p of missingPlayers) {
+        try {
+          await upsertPlayerInSupabase({
+            id: p.id,
+            name: p.name,
+            team: p.team,
+            position: p.position || '',
+            order: p.order || 0,
+            imageFit: p.imageFit || 'cover',
+            imagePosition: p.imagePosition || 'top',
+            imageUrl: p.imageUrl || '',
+            createdAt: p.createdAt || Date.now()
+          });
+          
+          supabasePlayers.push({
+            id: p.id,
+            nome: p.name,
+            time: p.team,
+            logo_url: JSON.stringify({
+              url: p.imageUrl || '',
+              position: p.position || '',
+              order: p.order || 0,
+              imageFit: p.imageFit || 'cover',
+              imagePosition: p.imagePosition || 'top'
+            }),
+            criado_em: new Date(p.createdAt || Date.now()).toISOString()
+          });
+        } catch (seedErr) {
+          console.error(`Error auto-seeding player ${p.name}:`, seedErr);
         }
-
-        return {
-          id: p.id,
-          name: p.nome || '',
-          team: p.time || '',
-          position,
-          imageUrl,
-          imageFit,
-          imagePosition,
-          order,
-          createdAt: p.criado_em ? new Date(p.criado_em).getTime() : Date.now(),
-          votesCount: 0
-        };
-      }) as Player[];
+      }
     }
+
+    playersList = supabasePlayers.map((p: any) => {
+      let imageUrl = p.logo_url || '';
+      let position = '';
+      let imageFit = 'cover' as 'cover' | 'contain';
+      let imagePosition = 'top' as 'top' | 'center' | 'bottom';
+      let order = 0;
+
+      if (p.logo_url && p.logo_url.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(p.logo_url);
+          imageUrl = parsed.url || '';
+          position = parsed.position || '';
+          imageFit = parsed.imageFit || 'cover';
+          imagePosition = parsed.imagePosition || 'top';
+          order = typeof parsed.order === 'number' ? parsed.order : 0;
+        } catch (e) {
+          // fallback
+        }
+      }
+
+      return {
+        id: p.id,
+        name: p.nome || '',
+        team: p.time || '',
+        position,
+        imageUrl,
+        imageFit,
+        imagePosition,
+        order,
+        createdAt: p.criado_em ? new Date(p.criado_em).getTime() : Date.now(),
+        votesCount: 0
+      };
+    }) as Player[];
 
     // 2. Dynamically retrieve real-time votes from Supabase
     const now = Date.now();
