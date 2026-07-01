@@ -438,6 +438,9 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
   const [configMsg, setConfigMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const [votesHistory, setVotesHistory] = useState<Vote[]>([]);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmDeletePlayerId, setConfirmDeletePlayerId] = useState<string | null>(null);
+  const [voteDeleteError, setVoteDeleteError] = useState<string | null>(null);
 
   // Campaign Management states
   const [newCampaignName, setNewCampaignName] = useState('');
@@ -612,8 +615,9 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = teamId === 'principal' || teamId === 'sponsor' ? 240 : 100;
-        const MAX_HEIGHT = teamId === 'principal' || teamId === 'sponsor' ? 100 : 100;
+        // Usar dimensões maiores para os escudos ficarem nítidos (350x350 para os times, 450x250 para principal/patrocinador)
+        const MAX_WIDTH = teamId === 'principal' || teamId === 'sponsor' ? 450 : 350;
+        const MAX_HEIGHT = teamId === 'principal' || teamId === 'sponsor' ? 250 : 350;
         let width = img.width;
         let height = img.height;
 
@@ -642,9 +646,13 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
 
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height);
-          // Converter para WebP com compressão de 0.3 para ficar super leve mantendo transparência
-          const dataUrl = canvas.toDataURL('image/webp', 0.3);
-          applyLogo(dataUrl);
+          // Exportar em PNG para garantir transparência perfeita e máxima fidelidade de cores
+          try {
+            const dataUrl = canvas.toDataURL('image/png');
+            applyLogo(dataUrl);
+          } catch (err) {
+            applyLogo(reader.result as string);
+          }
         } else {
           applyLogo(reader.result as string);
         }
@@ -840,17 +848,15 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDeleteClick = async (id: string, name: string) => {
-    if (confirm(`Tem certeza que deseja excluir o jogador "${name}"? Todos os votos dele serão perdidos permanentemente.`)) {
-      try {
-        await deletePlayer(id);
-        setOperationMsg({ type: 'success', text: 'Jogador excluído com sucesso!' });
-        onRefresh();
-        if (editingPlayerId === id) resetForm();
-      } catch (err) {
-        console.error(err);
-        setOperationMsg({ type: 'error', text: 'Erro ao excluir o jogador.' });
-      }
+  const handleDeleteClick = async (id: string) => {
+    try {
+      await deletePlayer(id);
+      setOperationMsg({ type: 'success', text: 'Jogador excluído com sucesso!' });
+      onRefresh();
+      if (editingPlayerId === id) resetForm();
+    } catch (err) {
+      console.error(err);
+      setOperationMsg({ type: 'error', text: 'Erro ao excluir o jogador.' });
     }
   };
 
@@ -1368,6 +1374,12 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
         <h3 className="text-base font-extrabold text-gray-900 border-b border-gray-100 pb-3 mb-4">
           Últimos Votos Registrados
         </h3>
+        {voteDeleteError && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-xs font-semibold text-red-700 flex items-center gap-2 animate-fade-in">
+            <span className="shrink-0 bg-red-100 text-red-800 rounded-full p-1 leading-none text-[10px]">⚠️</span>
+            <span>{voteDeleteError}</span>
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -1407,25 +1419,48 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
                       </td>
                       <td className="py-3 font-bold text-emerald-700">{player?.name || 'Desconhecido'}</td>
                       <td className="py-3 text-right">
-                        <button
-                          onClick={async () => {
-                            if (window.confirm('Tem certeza que deseja apagar este voto?')) {
-                              try {
-                                await deleteVote(vote.id, vote.playerId);
-                                loadVotesHistory();
-                                if (onRefresh) {
-                                  await onRefresh();
+                        {confirmDeleteId === vote.id ? (
+                          <div className="flex items-center justify-end gap-2 animate-fade-in">
+                            <span className="text-[10px] text-red-500 font-bold uppercase tracking-wider">Apagar?</span>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  setVoteDeleteError(null);
+                                  await deleteVote(vote.id, vote.playerId);
+                                  setConfirmDeleteId(null);
+                                  loadVotesHistory();
+                                  if (onRefresh) {
+                                    await onRefresh();
+                                  }
+                                } catch (e: any) {
+                                  console.error(e);
+                                  setVoteDeleteError(e.message || 'Erro ao apagar voto.');
+                                  setTimeout(() => setVoteDeleteError(null), 8000);
+                                  setConfirmDeleteId(null);
                                 }
-                              } catch (e: any) {
-                                alert(e.message || 'Erro ao apagar voto.');
-                              }
-                            }
-                          }}
-                          className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition-colors"
-                          title="Apagar Voto"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                        </button>
+                              }}
+                              className="px-2 py-0.5 text-[10px] font-black bg-red-600 hover:bg-red-700 text-white rounded-md uppercase tracking-wider transition-all"
+                            >
+                              Sim
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="px-2 py-0.5 text-[10px] font-black bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md uppercase tracking-wider transition-all"
+                            >
+                              Não
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setConfirmDeleteId(vote.id);
+                            }}
+                            className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition-colors cursor-pointer"
+                            title="Apagar Voto"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -1948,10 +1983,31 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
                         <span className="inline-flex px-2.5 py-1 text-xs font-black bg-emerald-50 text-emerald-800 rounded-full">{player.votesCount}</span>
                       </td>
                       <td className="py-3 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button onClick={() => handleEditClick(player)} className="p-1.5 text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg cursor-pointer"><Edit2 className="w-4 h-4" /></button>
-                          <button onClick={() => handleDeleteClick(player.id, player.name)} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"><Trash2 className="w-4 h-4" /></button>
-                        </div>
+                        {confirmDeletePlayerId === player.id ? (
+                          <div className="flex items-center justify-end gap-2 animate-fade-in">
+                            <span className="text-[10px] text-red-500 font-bold uppercase tracking-wider">Excluir?</span>
+                            <button
+                              onClick={async () => {
+                                setConfirmDeletePlayerId(null);
+                                await handleDeleteClick(player.id);
+                              }}
+                              className="px-2 py-0.5 text-[10px] font-black bg-red-600 hover:bg-red-700 text-white rounded-md uppercase tracking-wider transition-all"
+                            >
+                              Sim
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeletePlayerId(null)}
+                              className="px-2 py-0.5 text-[10px] font-black bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md uppercase tracking-wider transition-all"
+                            >
+                              Não
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button onClick={() => handleEditClick(player)} className="p-1.5 text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg cursor-pointer" title="Editar Jogador"><Edit2 className="w-4 h-4" /></button>
+                            <button onClick={() => setConfirmDeletePlayerId(player.id)} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer" title="Excluir Jogador"><Trash2 className="w-4 h-4" /></button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}
