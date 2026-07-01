@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <script>
+      // Prevent TypeError: Cannot set property fetch of #<Window> which has only a getter
+      try {
+        const originalFetch = window.fetch;
+        if (originalFetch) {
+          let currentFetch = originalFetch;
+          Object.defineProperty(window, 'fetch', {
+            get() {
+              return currentFetch;
+            },
+            set(val) {
+              currentFetch = val;
+            },
+            configurable: true,
+            enumerable: true
+          });
+        }
+      } catch (e) {
+        console.warn('Unable to patch window.fetch:', e);
+      }
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Melhor Prata da Casa - Morro do Chapéu 2026</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

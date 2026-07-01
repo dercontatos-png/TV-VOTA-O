@@ -1,0 +1,52 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper to validate basic IDs
+    function isValidId(id) {
+      return id is string && id.size() <= 128;
+    }
+
+    // Helper to check if a player document is valid
+    function isValidPlayer(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 150
+          && data.team is string && data.team.size() > 0 && data.team.size() <= 150
+          && data.position is string && data.position.size() <= 100
+          && data.imageUrl is string && data.imageUrl.size() <= 3000000
+          && data.votesCount is int
+          && data.createdAt is int;
+    }
+
+    // Helper to check if a vote document is valid
+    function isValidVote(data) {
+      return data.id is string && data.id.size() <= 128
+          && data.playerId is string && data.playerId.size() <= 128
+          && data.voterId is string && data.voterId.size() <= 128
+          && data.dateStr is string && data.dateStr.size() <= 20
+          && data.timestamp is int;
+    }
+
+    // Catch-all deny rules
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    match /players/{playerId} {
+      allow read: if true;
+      allow create: if isValidId(playerId) && isValidPlayer(request.resource.data);
+      allow update: if isValidId(playerId) && isValidPlayer(request.resource.data);
+      allow delete: if isValidId(playerId);
+    }
+
+    match /votes/{voteId} {
+      allow read: if true;
+      allow create: if isValidId(voteId) && isValidVote(request.resource.data);
+      allow update: if isValidId(voteId) && isValidVote(request.resource.data);
+      allow delete: if true;
+    }
+
+    match /settings/{settingId} {
+      allow read, write: if true;
+    }
+  }
+}

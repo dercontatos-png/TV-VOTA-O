@@ -1,0 +1,6 @@
+{
+  "name": "Melhor Prata da Casa - Morro do Chapéu 2026",
+  "description": "Sistema de votação para escolher o melhor Prata da Casa das equipes finalistas do campeonato municipal de Morro do Chapéu.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

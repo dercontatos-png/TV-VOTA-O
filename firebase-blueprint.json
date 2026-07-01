@@ -1,0 +1,41 @@
+{
+  "entities": {
+    "Player": {
+      "title": "Player",
+      "description": "A player nominated for Craque do Campeonato",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "team": { "type": "string" },
+        "position": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "votesCount": { "type": "number" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["name", "team", "votesCount", "createdAt"]
+    },
+    "Vote": {
+      "title": "Vote",
+      "description": "A vote cast for a player",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "playerId": { "type": "string" },
+        "voterId": { "type": "string" },
+        "dateStr": { "type": "string" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["id", "playerId", "voterId", "dateStr", "timestamp"]
+    }
+  },
+  "firestore": {
+    "players/{playerId}": {
+      "schema": "Player",
+      "description": "Collection of players"
+    },
+    "votes/{voteId}": {
+      "schema": "Vote",
+      "description": "Collection of votes cast by users"
+    }
+  }
+}
