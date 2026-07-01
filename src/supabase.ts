@@ -175,14 +175,10 @@ export async function upsertPlayerInSupabase(player: any) {
       .upsert([
         {
           id: player.id,
-          name: player.name,
-          team: player.team,
-          position: player.position || '',
-          imageUrl: player.imageUrl || '',
-          imageFit: player.imageFit || 'cover',
-          imagePosition: player.imagePosition || 'top',
-          order: player.order || 0,
-          createdAt: player.createdAt || Date.now()
+          nome: player.name,
+          time: player.team,
+          logo_url: player.imageUrl || '',
+          criado_em: player.createdAt ? new Date(player.createdAt).toISOString() : new Date().toISOString()
         }
       ]);
     if (error) {
@@ -222,8 +218,8 @@ export async function getSettingsFromSupabase() {
     if (error) {
       return null;
     }
-    if (data && data.name) {
-      return JSON.parse(data.name); // We store the JSON in the name field
+    if (data && data.nome) {
+      return JSON.parse(data.nome);
     }
     return null;
   } catch (err) {
@@ -238,10 +234,10 @@ export async function upsertSettingsInSupabase(settings: any) {
       .upsert([
         {
           id: 'system_config',
-          name: JSON.stringify(settings), // Serialize entire config into name
-          team: 'SYSTEM',
-          position: 'CONFIG',
-          order: -1
+          nome: JSON.stringify(settings),
+          time: 'SYSTEM',
+          logo_url: '',
+          criado_em: new Date().toISOString()
         }
       ]);
     if (error) {

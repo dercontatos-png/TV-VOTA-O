@@ -43,19 +43,8 @@ export function getBahiaDateStr(): string {
  * or inside the development/preview container of Google AI Studio.
  */
 export function isClientOnly(): boolean {
-  if (typeof window === 'undefined') return false;
-  
-  // If explicitly requested via Vite environment variables
-  if (import.meta.env.VITE_NETLIFY === 'true' || import.meta.env.VITE_CLIENT_ONLY === 'true') {
-    return true;
-  }
-  
-  const host = window.location.hostname;
-  // AI Studio preview URLs end with run.app, and dev server runs on localhost
-  const isStudioPreview = host.includes('run.app') || host.includes('localhost') || host.includes('127.0.0.1');
-  return !isStudioPreview;
+  return true; // Always use direct Supabase client for all environments (Netlify, AI Studio, local)
 }
-
 
 export async function getPlayers(): Promise<Player[]> {
   try {
@@ -73,14 +62,14 @@ export async function getPlayers(): Promise<Player[]> {
       } else {
         playersList = supabasePlayers.map((p: any) => ({
           id: p.id,
-          name: p.name,
-          team: p.team,
-          position: p.position || '',
-          imageUrl: p.imageUrl || '',
-          imageFit: p.imageFit || 'cover',
-          imagePosition: p.imagePosition || 'top',
-          order: p.order || 0,
-          createdAt: p.createdAt || Date.now(),
+          name: p.nome || '',
+          team: p.time || '',
+          position: '',
+          imageUrl: p.logo_url || '',
+          imageFit: 'cover',
+          imagePosition: 'top',
+          order: 0,
+          createdAt: p.criado_em ? new Date(p.criado_em).getTime() : Date.now(),
           votesCount: 0
         })) as Player[];
       }
@@ -179,11 +168,17 @@ export async function addPlayer(
 
 export async function updatePlayer(id: string, updates: Partial<Player>): Promise<void> {
   if (isClientOnly()) {
-    // First get the player
     const supabasePlayers = await getPlayersFromSupabase();
     const existing = supabasePlayers.find((p: any) => p.id === id);
     if (existing) {
-      const merged = { ...existing, ...updates };
+      const merged = { 
+        id: existing.id,
+        name: existing.nome || '',
+        team: existing.time || '',
+        imageUrl: existing.logo_url || '',
+        createdAt: existing.criado_em ? new Date(existing.criado_em).getTime() : Date.now(),
+        ...updates 
+      };
       await upsertPlayerInSupabase(merged);
     }
   } else {
@@ -199,7 +194,6 @@ export async function updatePlayer(id: string, updates: Partial<Player>): Promis
     }
   }
 }
-
 
 export async function deletePlayer(id: string): Promise<void> {
   if (isClientOnly()) {
