@@ -112,7 +112,7 @@ export default function PlayerCard({
                 src={player.imageUrl}
                 alt={player.name}
                 referrerPolicy="no-referrer"
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                className="w-full h-full object-contain bg-slate-200 transition-transform duration-500 group-hover:scale-105"
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.display = 'none';
                 }}

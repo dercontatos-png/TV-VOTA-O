@@ -13,8 +13,8 @@ interface VotingPanelProps {
   recommendedPlayerId?: string | null;
   config: SystemConfig | null;
   voterInfo: VoterInfo | null;
-  onIdentifyVoter: (info: VoterInfo) => void;
-  onLogoutVoter: () => void;
+  onLogin: () => void;
+  onLogout: () => void;
 }
 
 export default function VotingPanel({
@@ -26,57 +26,20 @@ export default function VotingPanel({
   recommendedPlayerId,
   config,
   voterInfo,
-  onIdentifyVoter,
-  onLogoutVoter,
+  onLogin,
+  onLogout,
 }: VotingPanelProps) {
   const [search, setSearch] = useState('');
   const [selectedTeam, setSelectedTeam] = useState('Todos');
   const [timeLeft, setTimeLeft] = useState('');
 
-  // States for Voter Login / Identification modal
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [pendingPlayerIdToVote, setPendingPlayerIdToVote] = useState<string | null>(null);
-  const [voterNameInput, setVoterNameInput] = useState('');
-  const [voterPhoneInput, setVoterPhoneInput] = useState('');
-  const [voterError, setVoterError] = useState('');
-
-  // Handler for voter login form submission
-  const handleVoterSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setVoterError('');
-
-    const cleanedName = voterNameInput.trim();
-    const cleanedPhone = voterPhoneInput.replace(/\D/g, '');
-
-    if (cleanedName.length < 3) {
-      setVoterError('O nome deve conter pelo menos 3 caracteres.');
-      return;
-    }
-
-    if (cleanedPhone.length < 10) {
-      setVoterError('Insira um número de celular ou WhatsApp válido com DDD (ex: 74999999999).');
-      return;
-    }
-
-    // Identify voter
-    const info: VoterInfo = { name: cleanedName, phone: cleanedPhone };
-    onIdentifyVoter(info);
-    setShowAuthModal(false);
-
-    // If there was a pending vote click, cast it now!
-    if (pendingPlayerIdToVote) {
-      onVote(pendingPlayerIdToVote);
-      setPendingPlayerIdToVote(null);
-    }
-  };
-
-  // Trigger login modal if not identified yet, otherwise cast vote immediately
-  const handleVoteClick = (playerId: string) => {
-    if (voterInfo) {
-      onVote(playerId);
+  // We don't need local states for auth modal anymore, 
+  // we just use onLogin which pops up Google Auth.
+  const handleInitiateVote = (playerId: string) => {
+    if (!voterInfo) {
+      onLogin(); // Trigger Google Login if not logged in
     } else {
-      setPendingPlayerIdToVote(playerId);
-      setShowAuthModal(true);
+      onVote(playerId);
     }
   };
 
@@ -165,13 +128,12 @@ export default function VotingPanel({
         <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:24px_24px]"></div>
         <div className="absolute -top-32 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl pointer-events-none"></div>
         
-        {/* TV Chapada Space */}
-        <div className="relative z-10 mb-6 bg-white/10 backdrop-blur-sm border border-white/20 px-6 py-2 rounded-2xl flex items-center justify-center gap-3">
-          <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center">
-            <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+        {/* Sponsor/Main Logo Space */}
+        {config?.logoPrincipal && (
+          <div className="relative z-10 mb-8 max-w-[200px] md:max-w-[250px] bg-white/10 backdrop-blur-sm border border-white/20 p-4 rounded-2xl flex items-center justify-center shadow-lg">
+            <img src={config.logoPrincipal} alt="Logo Principal" className="w-full h-auto object-contain max-h-[80px]" />
           </div>
-          <span className="text-white font-black tracking-widest uppercase text-sm">TV Chapada</span>
-        </div>
+        )}
 
         {/* Team Logos Matchup */}
         <div className="relative z-10 flex items-center justify-center gap-6 md:gap-14 mb-8" id="team-matchup-logos">
@@ -212,9 +174,14 @@ export default function VotingPanel({
         </div>
 
         {/* Voting Question / Question of the hour */}
-        <h2 className="relative z-10 text-xl md:text-2xl lg:text-3xl font-display font-black tracking-tight text-white max-w-3xl leading-snug px-2" id="question-text">
-          {config?.votingQuestion || 'Quem é o seu favorito para conquistar o título de melhor "Prata da Casa" do Campeonato Municipal de Morro do Chapéu 2026 - Azuup x Campinense'}
-        </h2>
+        <div className="relative z-10 w-full max-w-4xl mx-auto mt-2">
+          <div className="bg-gradient-to-b from-white/10 to-white/5 border border-white/10 backdrop-blur-md rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-sky-400 to-blue-500"></div>
+            <h2 className="text-lg md:text-2xl lg:text-3xl font-display font-black tracking-tight text-white leading-tight md:leading-snug" id="question-text">
+              {config?.votingQuestion || 'Quem é o seu favorito para conquistar o título de melhor "Prata da Casa" do Campeonato Municipal de Morro do Chapéu 2026 - Azuup x Campinense'}
+            </h2>
+          </div>
+        </div>
 
         {/* Voting Schedule details and badge */}
         <div className="relative z-10 mt-6 flex flex-wrap gap-2.5 justify-center items-center">
@@ -352,7 +319,7 @@ export default function VotingPanel({
                 </div>
               ) : (
                 <button
-                  onClick={() => handleVoteClick(recommendedPlayer.id)}
+                  onClick={() => handleInitiateVote(recommendedPlayer.id)}
                   disabled={isVoting}
                   className="w-full md:w-auto px-7 py-3.5 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-sm tracking-wide shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer text-center"
                 >
@@ -494,7 +461,7 @@ export default function VotingPanel({
               key={player.id}
               player={player}
               totalVotes={totalVotes}
-              onVote={handleVoteClick}
+              onVote={handleInitiateVote}
               hasVotedToday={hasVotedToday}
               votedPlayerId={votedPlayerId}
               isVoting={isVoting}
@@ -518,125 +485,6 @@ export default function VotingPanel({
         </div>
       )}
 
-      {/* 5. Elegant Voter Login / Identification Modal */}
-      {showAuthModal && (
-        <div
-          className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50 p-4 transition-all duration-300 animate-fade-in"
-          onClick={() => {
-            setShowAuthModal(false);
-            setPendingPlayerIdToVote(null);
-          }}
-        >
-          <div
-            className="bg-white rounded-[32px] overflow-hidden max-w-md w-full shadow-2xl relative border border-slate-100 p-6 md:p-8 animate-scale-up"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Close button */}
-            <button
-              onClick={() => {
-                setShowAuthModal(false);
-                setPendingPlayerIdToVote(null);
-              }}
-              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-950 bg-slate-50 hover:bg-slate-100 rounded-full transition-colors cursor-pointer border border-slate-100"
-              aria-label="Fechar"
-            >
-              <X className="w-5 h-5 stroke-[2]" />
-            </button>
-
-            {/* Modal Header */}
-            <div className="text-center mb-6">
-              <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-sky-500 rounded-2xl flex items-center justify-center text-white mx-auto mb-4 shadow-lg shadow-blue-500/10">
-                <UserCheck className="w-7 h-7 stroke-[2.2]" />
-              </div>
-              <h3 className="text-xl font-black text-slate-900 tracking-tight font-display">
-                Identificação do Eleitor
-              </h3>
-              <p className="text-xs text-slate-500 mt-2 max-w-xs mx-auto leading-relaxed">
-                Insira seu nome e número de WhatsApp para validar seu voto e garantir a auditoria limpa do campeonato.
-              </p>
-            </div>
-
-            {/* Form */}
-            <form onSubmit={handleVoterSubmit} className="space-y-4">
-              {/* Name Input */}
-              <div className="space-y-1.5">
-                <label htmlFor="voter-name" className="text-xs font-black text-slate-500 uppercase tracking-wider block">
-                  Nome Completo
-                </label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
-                    <User className="w-4 h-4 text-slate-400" />
-                  </span>
-                  <input
-                    id="voter-name"
-                    type="text"
-                    required
-                    placeholder="Ex: João Silva de Souza"
-                    value={voterNameInput}
-                    onChange={(e) => {
-                      setVoterNameInput(e.target.value);
-                      if (voterError) setVoterError('');
-                    }}
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden text-sm transition-colors text-slate-800 font-medium"
-                  />
-                </div>
-              </div>
-
-              {/* Phone Input */}
-              <div className="space-y-1.5">
-                <label htmlFor="voter-phone" className="text-xs font-black text-slate-500 uppercase tracking-wider block">
-                  Celular / WhatsApp
-                </label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
-                    <Smartphone className="w-4 h-4 text-slate-400" />
-                  </span>
-                  <input
-                    id="voter-phone"
-                    type="tel"
-                    required
-                    placeholder="Ex: (74) 99999-9999"
-                    value={voterPhoneInput}
-                    onChange={(e) => {
-                      setVoterPhoneInput(e.target.value);
-                      if (voterError) setVoterError('');
-                    }}
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden text-sm transition-colors text-slate-800 font-medium"
-                  />
-                </div>
-              </div>
-
-              {/* Error Warning block */}
-              {voterError && (
-                <div className="p-3.5 bg-rose-50 border border-rose-100 text-rose-600 text-xs font-bold rounded-xl flex items-start gap-2 animate-fade-in">
-                  <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>{voterError}</span>
-                </div>
-              )}
-
-              {/* Action buttons */}
-              <div className="pt-3 flex flex-col gap-2">
-                <button
-                  type="submit"
-                  className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 text-white font-black text-sm tracking-wide shadow-md shadow-blue-500/10 hover:shadow-lg transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer text-center"
-                >
-                  {pendingPlayerIdToVote ? 'Confirmar Identificação e Votar' : 'Confirmar Identificação'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAuthModal(false);
-                    setPendingPlayerIdToVote(null);
-                  }}
-                  className="w-full py-2.5 px-4 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 text-xs font-bold transition-colors cursor-pointer text-center"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

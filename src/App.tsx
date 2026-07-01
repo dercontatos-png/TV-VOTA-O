@@ -45,7 +45,7 @@ export default function App() {
 
   // Reactive voterId computation based on identification
   const voterId = voterInfo 
-    ? `voter_phone_${voterInfo.phone.replace(/\D/g, '')}`
+    ? `voter_${voterInfo.id}`
     : getOrCreateVoterId();
 
   // Voting restriction states
@@ -72,10 +72,26 @@ export default function App() {
   // Firebase Auth Observer to persist admin session
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user && user.email === 'der.contatos@gmail.com') {
-        setAdminUser(user);
+      if (user) {
+        if (user.email === 'der.contatos@gmail.com') {
+          setAdminUser(user);
+        } else {
+          setAdminUser(null);
+          // Set voter info from Google Auth
+          const vInfo: VoterInfo = {
+            id: user.uid,
+            name: user.displayName || 'Eleitor',
+            email: user.email || ''
+          };
+          setVoterInfo(vInfo);
+          localStorage.setItem('craque_voter_info', JSON.stringify(vInfo));
+        }
       } else {
         setAdminUser(null);
+        // Do not clear voterInfo if they just haven't signed in today, but 
+        // to be secure, if firebase says not logged in, we should clear it.
+        setVoterInfo(null);
+        localStorage.removeItem('craque_voter_info');
         setView('voting');
       }
       setCheckingAdmin(false);
@@ -83,8 +99,8 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Google Sign-In with popup trigger
-  const handleAdminLogin = async () => {
+  // Generic Google Sign-In with popup trigger
+  const handleGoogleLogin = async () => {
     try {
       setAuthError(null);
       const result = await signInWithPopup(auth, googleProvider);
@@ -94,8 +110,7 @@ export default function App() {
         setAdminUser(user);
         setView('admin');
       } else {
-        await signOut(auth);
-        setAuthError(`Acesso negado (${user.email}). O Painel Admin é exclusivo para organizadores.`);
+        // Handled by onAuthStateChanged, they become a voter
       }
     } catch (error: any) {
       console.error("Error signing in with Google:", error);
@@ -105,10 +120,12 @@ export default function App() {
     }
   };
 
-  const handleAdminLogout = async () => {
+  const handleLogout = async () => {
     try {
       await signOut(auth);
       setAdminUser(null);
+      setVoterInfo(null);
+      localStorage.removeItem('craque_voter_info');
       setView('voting');
     } catch (error) {
       console.error("Error signing out:", error);
@@ -140,18 +157,6 @@ export default function App() {
   const handleUpdateConfig = async (newConfig: SystemConfig) => {
     await updateSystemConfig(newConfig);
     setConfig(newConfig);
-  };
-
-  // Login/Identify Voter
-  const handleIdentifyVoter = (info: VoterInfo) => {
-    localStorage.setItem('craque_voter_info', JSON.stringify(info));
-    setVoterInfo(info);
-  };
-
-  // Logout/Clear Voter
-  const handleLogoutVoter = () => {
-    localStorage.removeItem('craque_voter_info');
-    setVoterInfo(null);
   };
 
   useEffect(() => {
@@ -198,14 +203,14 @@ export default function App() {
         config={config} 
         isAdmin={!!adminUser}
         adminEmail={adminUser?.email}
-        onAdminLogout={handleAdminLogout}
+        onAdminLogout={handleLogout}
       />
 
       {/* 2. Main Content Stage */}
       <main className="flex-grow pb-12">
         {loading ? (
           <div className="flex flex-col items-center justify-center min-h-[50vh] animate-fade-in" id="loading-spinner">
-            <Loader2 className="w-12 h-12 text-emerald-600 animate-spin" />
+            <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
             <p className="text-xs font-extrabold uppercase tracking-widest text-slate-400 mt-4">Carregando dados da votação...</p>
           </div>
         ) : activeView === 'voting' ? (
@@ -218,8 +223,8 @@ export default function App() {
             recommendedPlayerId={recommendedPlayerId}
             config={config}
             voterInfo={voterInfo}
-            onIdentifyVoter={handleIdentifyVoter}
-            onLogoutVoter={handleLogoutVoter}
+            onLogin={handleGoogleLogin}
+            onLogout={handleLogout}
           />
         ) : (
           <AdminPanel 
@@ -235,7 +240,7 @@ export default function App() {
       <Footer 
         onNavigate={setView} 
         isAdmin={!!adminUser}
-        onAdminLogin={handleAdminLogin}
+        onLogin={handleGoogleLogin}
       />
 
       {/* 4. Elegant Success Confirmation Modal */}

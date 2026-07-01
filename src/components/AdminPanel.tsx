@@ -39,6 +39,7 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
   const [votingQuestion, setVotingQuestion] = useState('');
   const [logoAzuup, setLogoAzuup] = useState('');
   const [logoCampinense, setLogoCampinense] = useState('');
+  const [logoPrincipal, setLogoPrincipal] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [votingEnabled, setVotingEnabled] = useState(true);
@@ -49,12 +50,14 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
 
   const logoAzuupRef = useRef<HTMLInputElement>(null);
   const logoCampinenseRef = useRef<HTMLInputElement>(null);
+  const logoPrincipalRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (config) {
       setVotingQuestion(config.votingQuestion || '');
       setLogoAzuup(config.logoAzuup || '');
       setLogoCampinense(config.logoCampinense || '');
+      setLogoPrincipal(config.logoPrincipal || '');
       setStartDate(config.startDate || '');
       setEndDate(config.endDate || '');
       setVotingEnabled(config.votingEnabled !== false);
@@ -90,6 +93,7 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
         votingQuestion: votingQuestion.trim(),
         logoAzuup,
         logoCampinense,
+        logoPrincipal,
         startDate,
         endDate,
         votingEnabled
@@ -104,7 +108,7 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
     }
   };
 
-  const processTeamLogoFile = (file: File, teamId: 'azuup' | 'campinense') => {
+  const processTeamLogoFile = (file: File, teamId: 'azuup' | 'campinense' | 'principal') => {
     if (!file.type.startsWith('image/')) {
       alert('Por favor, selecione apenas arquivos de imagem.');
       return;
@@ -115,8 +119,8 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 200;
-        const MAX_HEIGHT = 200;
+        const MAX_WIDTH = teamId === 'principal' ? 400 : 200;
+        const MAX_HEIGHT = teamId === 'principal' ? 150 : 200;
         let width = img.width;
         let height = img.height;
 
@@ -136,20 +140,18 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
         canvas.height = height;
 
         const ctx = canvas.getContext('2d');
+        const applyLogo = (val: string) => {
+          if (teamId === 'azuup') setLogoAzuup(val);
+          else if (teamId === 'campinense') setLogoCampinense(val);
+          else setLogoPrincipal(val);
+        };
+
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height);
           const dataUrl = canvas.toDataURL('image/png');
-          if (teamId === 'azuup') {
-            setLogoAzuup(dataUrl);
-          } else {
-            setLogoCampinense(dataUrl);
-          }
+          applyLogo(dataUrl);
         } else {
-          if (teamId === 'azuup') {
-            setLogoAzuup(reader.result as string);
-          } else {
-            setLogoCampinense(reader.result as string);
-          }
+          applyLogo(reader.result as string);
         }
       };
       img.src = event.target?.result as string;
@@ -678,6 +680,47 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
                   className="w-full px-4 py-2 text-sm rounded-xl border border-gray-200 focus:border-emerald-500 focus:outline-hidden text-gray-800 resize-none"
                   required
                 />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="flex flex-col items-center">
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Logo Principal</label>
+                  <div 
+                    onClick={() => logoPrincipalRef.current?.click()}
+                    className="w-full h-24 border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center cursor-pointer hover:border-emerald-400 hover:bg-gray-50 overflow-hidden"
+                  >
+                    {logoPrincipal ? <img src={logoPrincipal} className="h-full object-contain p-2" /> : <span className="text-xs text-gray-400 font-bold px-2 text-center">Clique para Mudar</span>}
+                  </div>
+                  <input type="file" ref={logoPrincipalRef} className="hidden" accept="image/*" onChange={(e) => {
+                    if (e.target.files?.[0]) processTeamLogoFile(e.target.files[0], 'principal');
+                  }} />
+                </div>
+
+                <div className="flex flex-col items-center">
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Logo Azuup</label>
+                  <div 
+                    onClick={() => logoAzuupRef.current?.click()}
+                    className="w-full h-24 border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 overflow-hidden"
+                  >
+                    {logoAzuup ? <img src={logoAzuup} className="h-full object-contain p-2" /> : <span className="text-xs text-gray-400 font-bold px-2 text-center">Clique para Mudar</span>}
+                  </div>
+                  <input type="file" ref={logoAzuupRef} className="hidden" accept="image/*" onChange={(e) => {
+                    if (e.target.files?.[0]) processTeamLogoFile(e.target.files[0], 'azuup');
+                  }} />
+                </div>
+
+                <div className="flex flex-col items-center">
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Logo Campinense</label>
+                  <div 
+                    onClick={() => logoCampinenseRef.current?.click()}
+                    className="w-full h-24 border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center cursor-pointer hover:border-red-400 hover:bg-red-50 overflow-hidden"
+                  >
+                    {logoCampinense ? <img src={logoCampinense} className="h-full object-contain p-2" /> : <span className="text-xs text-gray-400 font-bold px-2 text-center">Clique para Mudar</span>}
+                  </div>
+                  <input type="file" ref={logoCampinenseRef} className="hidden" accept="image/*" onChange={(e) => {
+                    if (e.target.files?.[0]) processTeamLogoFile(e.target.files[0], 'campinense');
+                  }} />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

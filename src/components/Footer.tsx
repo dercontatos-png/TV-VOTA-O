@@ -4,10 +4,10 @@ import { Share2, Check, ShieldAlert, Key } from 'lucide-react';
 interface FooterProps {
   onNavigate: (view: 'voting' | 'admin') => void;
   isAdmin: boolean;
-  onAdminLogin: () => void;
+  onLogin: () => void;
 }
 
-export default function Footer({ onNavigate, isAdmin, onAdminLogin }: FooterProps) {
+export default function Footer({ onNavigate, isAdmin, onLogin }: FooterProps) {
   const [copied, setCopied] = useState(false);
 
   const handleShare = () => {
@@ -53,7 +53,7 @@ export default function Footer({ onNavigate, isAdmin, onAdminLogin }: FooterProp
             )}
           </button>
 
-          {isAdmin && (
+          {isAdmin ? (
             <button
               id="footer-admin-link"
               onClick={() => onNavigate('admin')}
@@ -62,17 +62,22 @@ export default function Footer({ onNavigate, isAdmin, onAdminLogin }: FooterProp
               <Key className="w-3.5 h-3.5 text-blue-400" />
               <span>Painel Admin Liberado</span>
             </button>
+          ) : (
+            <button
+              id="footer-admin-login-link"
+              onClick={onLogin}
+              className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-white hover:bg-slate-800 px-3.5 py-2 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-slate-700"
+            >
+              <Key className="w-3.5 h-3.5" />
+              <span>Área do Organizador</span>
+            </button>
           )}
         </div>
       </div>
       
-      {/* Footer copyright area with secret double click trigger */}
-      <div className="max-w-6xl mx-auto border-t border-slate-800/60 mt-8 pt-6 flex flex-col sm:flex-row justify-between items-center text-xs text-slate-600 gap-4">
-        <div 
-          onDoubleClick={onAdminLogin}
-          className="cursor-default select-none hover:text-slate-500 transition-colors"
-          title="."
-        >
+      {/* Footer copyright area */}
+      <div className="max-w-6xl mx-auto border-t border-slate-800/60 mt-8 pt-6 flex justify-center items-center text-xs text-slate-600 gap-4">
+        <div>
           &copy; {new Date().getFullYear()} Campeonato de Morro do Chapéu. Todos os direitos reservados.
         </div>
       </div>

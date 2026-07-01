@@ -9,8 +9,10 @@ export interface Player {
 }
 
 export interface VoterInfo {
+  id: string;
+  email: string;
   name: string;
-  phone: string;
+  phone?: string;
 }
 
 export interface Vote {
@@ -21,12 +23,14 @@ export interface Vote {
   timestamp: number;
   voterName?: string;
   voterPhone?: string;
+  voterEmail?: string;
 }
 
 export interface SystemConfig {
   votingQuestion: string;
   logoAzuup: string; // Base64 image
   logoCampinense: string; // Base64 image
+  logoPrincipal?: string; // Base64 main logo
   startDate: string; // YYYY-MM-DDTHH:MM
   endDate: string; // YYYY-MM-DDTHH:MM
   votingEnabled: boolean;
