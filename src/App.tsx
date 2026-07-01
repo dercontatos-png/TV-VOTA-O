@@ -7,8 +7,7 @@ import AdminPanel from './components/AdminPanel';
 import { MuralPanel } from './components/MuralPanel';
 import { Player, SystemConfig, VoterInfo } from './types';
 import { getPlayers, castVote, hasVotedToday, getBahiaDateStr, getSystemConfig, updateSystemConfig } from './dbService';
-import { auth, googleProvider } from './firebase';
-import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { supabase } from './supabase';
 
 // Helper to generate or fetch unique voter fingerprint
 function getOrCreateVoterId(): string {
@@ -102,7 +101,7 @@ export default function App() {
   const [adminClickCount, setAdminClickCount] = useState(0);
 
   // Secure Admin Authentication State
-  const [adminUser, setAdminUser] = useState<FirebaseUser | null>(null);
+  const [adminUser, setAdminUser] = useState<any | null>(null);
   const [checkingAdmin, setCheckingAdmin] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
@@ -142,9 +141,9 @@ export default function App() {
     }
   }, []);
 
-  // Firebase Auth Observer to persist admin session
+  // Supabase Auth Observer to persist sessions
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const handleUserSession = (user: any) => {
       if (user) {
         if (user.email && ADMIN_EMAILS.includes(user.email)) {
           setAdminUser(user);
@@ -155,13 +154,11 @@ export default function App() {
           }
         } else {
           setAdminUser(null);
-          // Set voter info from Google Auth
           const vInfo: VoterInfo = {
-            id: user.uid,
-            name: user.displayName || 'Eleitor',
+            id: user.id,
+            name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Eleitor',
             email: user.email || '',
-            photoURL: user.photoURL || undefined,
-            phone: user.phoneNumber || undefined
+            photoURL: user.user_metadata?.avatar_url || user.user_metadata?.picture || undefined
           };
           setVoterInfo(vInfo);
           localStorage.setItem('craque_voter_info', JSON.stringify(vInfo));
@@ -172,8 +169,6 @@ export default function App() {
         }
       } else {
         setAdminUser(null);
-        // Do not clear voterInfo if they just haven't signed in today, but 
-        // to be secure, if firebase says not logged in, we should clear it.
         setVoterInfo(null);
         localStorage.removeItem('craque_voter_info');
         if (isMuralParam) {
@@ -185,8 +180,21 @@ export default function App() {
         }
       }
       setCheckingAdmin(false);
+    };
+
+    // Check initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      handleUserSession(session?.user || null);
     });
-    return () => unsubscribe();
+
+    // Listen to changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      handleUserSession(session?.user || null);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [isSharedLink, isMuralParam, isAdminParam]);
 
   // Fetch IP & Location on mount
@@ -219,34 +227,26 @@ export default function App() {
     fetchGeoIP();
   }, []);
 
-  // Generic Google Sign-In with popup trigger
+  // Generic Google Sign-In with OAuth trigger
   const handleGoogleLogin = async () => {
     try {
       setAuthError(null);
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-      
-      if (user.email && ADMIN_EMAILS.includes(user.email)) {
-        setAdminUser(user);
-        setView('admin');
-      } else {
-        if (!isSharedLink && view === 'admin') {
-          setAuthError('Acesso Negado. Este painel é exclusivo para o organizador.');
-        } else {
-          setView('voting');
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin
         }
-      }
+      });
+      if (error) throw error;
     } catch (error: any) {
-      console.error("Error signing in with Google:", error);
-      if (error.code !== 'auth/popup-closed-by-user') {
-        setAuthError("Não foi possível autenticar com o Google. Verifique se as permissões de pop-up estão ativas no navegador.");
-      }
+      console.error("Error signing in with Google via Supabase:", error);
+      setAuthError("Não foi possível iniciar a autenticação com o Google. Verifique sua conexão ou se cookies de terceiros estão bloqueados.");
     }
   };
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      await supabase.auth.signOut();
       setAdminUser(null);
       setVoterInfo(null);
       localStorage.removeItem('craque_voter_info');

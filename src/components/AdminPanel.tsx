@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { Player, SystemConfig, Vote } from '../types';
 import { addPlayer, updatePlayer, deletePlayer, resetAllVotes, getVotesHistory, DEFAULT_CONFIG, deleteVote } from '../dbService';
+import { uploadImageToSupabase } from '../supabase';
 import { MuralPanel } from './MuralPanel';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import * as htmlToImage from 'html-to-image';
@@ -419,6 +420,7 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
 
   // File Upload states
   const [isDragging, setIsDragging] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Voting Settings states
@@ -708,51 +710,26 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
     reader.readAsDataURL(file);
   };
 
-  // Convert File to Base64 String and compress/resize client-side to fit Firestore Limits
-  const processImageFile = (file: File) => {
+  // Upload file directly to Supabase Storage Bucket
+  const processImageFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       alert('Por favor, selecione apenas arquivos de imagem.');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 180;
-        const MAX_HEIGHT = 180;
-        let width = img.width;
-        let height = img.height;
+    setIsUploadingImage(true);
+    setOperationMsg(null);
 
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
-          }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, width, height);
-          // Converter para WebP para máxima compressão
-          const dataUrl = canvas.toDataURL('image/webp', 0.3);
-          setImageUrl(dataUrl);
-        } else {
-          setImageUrl(reader.result as string);
-        }
-      };
-      img.src = event.target?.result as string;
-    };
-    reader.readAsDataURL(file);
+    try {
+      const publicUrl = await uploadImageToSupabase(file);
+      setImageUrl(publicUrl);
+      setOperationMsg({ type: 'success', text: 'Imagem enviada com sucesso para o Supabase Storage!' });
+    } catch (err: any) {
+      console.error(err);
+      setOperationMsg({ type: 'error', text: `Erro ao enviar imagem: ${err.message || err}` });
+    } finally {
+      setIsUploadingImage(false);
+    }
   };
 
   // Drag and Drop Handlers
@@ -1616,7 +1593,12 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
                     className="hidden"
                   />
                   
-                  {imageUrl ? (
+                  {isUploadingImage ? (
+                    <div className="flex flex-col items-center">
+                      <RefreshCw className="w-6 h-6 text-emerald-500 animate-spin mb-1" />
+                      <span className="text-xs font-bold text-gray-500">Enviando para o Supabase...</span>
+                    </div>
+                  ) : imageUrl ? (
                     <div className="relative group w-20 h-20 rounded-full overflow-hidden border border-gray-200">
                       <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold">

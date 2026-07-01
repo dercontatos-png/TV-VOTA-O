@@ -5,8 +5,8 @@ if (typeof window !== 'undefined' && !(window as any).process) {
   (window as any).process = { env: {} };
 }
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "https://dvpnwzinajfqxmfylkiy.supabase.co";
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR2cG53emluYWpmcXhtZnlsa2l5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MTA0NzIsImV4cCI6MjA5ODQ4NjQ3Mn0.zyRm4dkQmthVvnKdg0fLT9KNm0pdHDqivbYRvxaO2hI";
+const supabaseUrl = "https://dvpnwzinajfqxmfylkiy.supabase.co";
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR2cG53emluYWpmcXhtZnlsa2l5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MTA0NzIsImV4cCI6MjA5ODQ4NjQ3Mn0.zyRm4dkQmthVvnKdg0fLT9KNm0pdHDqivbYRvxaO2hI";
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
@@ -202,14 +202,9 @@ export async function getPlayersFromSupabase() {
 export async function upsertPlayerInSupabase(player: any) {
   try {
     const tableName = await getPlayersTableName();
-    // Serialize extra fields into the logo_url field to preserve them under basic table schema
-    const logoUrlData = JSON.stringify({
-      url: player.imageUrl || '',
-      position: player.position || '',
-      order: player.order || 0,
-      imageFit: player.imageFit || 'cover',
-      imagePosition: player.imagePosition || 'top'
-    });
+    
+    // Directly save the image URL string in the logo_url column as requested
+    const logoUrlValue = player.imageUrl || '';
 
     const { error } = await supabase
       .from(tableName)
@@ -218,7 +213,7 @@ export async function upsertPlayerInSupabase(player: any) {
           id: player.id,
           nome: player.name,
           time: player.team,
-          logo_url: logoUrlData,
+          logo_url: logoUrlValue,
           criado_em: player.createdAt ? new Date(player.createdAt).toISOString() : new Date().toISOString()
         }
       ]);
@@ -343,4 +338,36 @@ export async function upsertSettingsInSupabase(settings: any) {
       throw err;
     }
   }
+}
+
+/**
+ * Uploads an image file directly to the public 'imagens' bucket in Supabase Storage
+ * and returns the public URL of the uploaded asset.
+ */
+export async function uploadImageToSupabase(file: File): Promise<string> {
+  const fileExt = file.name.split('.').pop() || 'jpg';
+  const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+  const filePath = `logos/${fileName}`;
+
+  const { data, error } = await supabase.storage
+    .from('imagens')
+    .upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: true
+    });
+
+  if (error) {
+    console.error("Supabase Storage upload error:", error);
+    throw new Error(`Erro no upload da imagem para o Supabase: ${error.message}`);
+  }
+
+  const { data: publicUrlData } = supabase.storage
+    .from('imagens')
+    .getPublicUrl(filePath);
+
+  if (!publicUrlData || !publicUrlData.publicUrl) {
+    throw new Error('Não foi possível gerar a URL pública da imagem enviada.');
+  }
+
+  return publicUrlData.publicUrl;
 }

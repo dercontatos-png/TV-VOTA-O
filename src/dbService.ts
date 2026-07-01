@@ -1,7 +1,5 @@
-import { collection, doc, getDocs, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { Player, Vote, SystemConfig } from './types';
 import { castVoteInSupabase, hasVotedTodayInSupabase, getVotesFromSupabase, getPlayersFromSupabase, upsertPlayerInSupabase, deletePlayerInSupabase, getSettingsFromSupabase, upsertSettingsInSupabase } from './supabase';
-import { db } from './firebase';
 
 // In-memory cache for Supabase votes to drastically optimize speeds and prevent API rate-limit lockouts
 let cachedSupabaseVotes: any[] | null = null;
