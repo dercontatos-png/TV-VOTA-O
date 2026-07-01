@@ -170,13 +170,13 @@ export default function PlayerCard({
                   {player.team}
                 </span>
               </div>
-              <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border shadow-xs ${teamTheme.bg} ${teamTheme.border}`}>
+              <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border shadow-xs ${teamTheme.bg} ${teamTheme.border} whitespace-nowrap`}>
                 {player.position || 'Atleta'}
               </span>
             </div>
 
             {/* Player Name */}
-            <h3 className="text-xl font-black text-slate-900 tracking-tight font-display mb-4 transition-colors line-clamp-1" title={player.name}>
+            <h3 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight font-display mb-4 transition-colors text-balance leading-tight" title={player.name}>
               {player.name}
             </h3>
 

@@ -570,15 +570,15 @@ export default function App() {
                 </div>
               </div>
             ) : (
-              <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-6 md:p-8 text-white relative">
+              <div className="bg-gradient-to-r from-blue-900 to-blue-800 p-8 md:p-10 text-white relative">
                 <div className="absolute top-4 right-4 w-12 h-12 bg-white/5 rounded-full blur-lg"></div>
-                <span className="bg-emerald-500 text-slate-950 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md">
+                <span className="bg-emerald-500 text-slate-950 text-[10px] md:text-xs font-black uppercase tracking-[0.2em] px-3 py-1.5 rounded-md shadow-sm inline-block mb-3">
                   Votação Oficial
                 </span>
-                <h2 className="text-xl md:text-2xl font-black font-display tracking-tight mt-2.5">
+                <h2 className="text-2xl md:text-3xl font-black font-display tracking-tight text-balance leading-tight drop-shadow-sm">
                   Quem é o melhor Prata da Casa?
                 </h2>
-                <p className="text-slate-300 text-xs mt-1.5 leading-relaxed">
+                <p className="text-blue-100 text-xs md:text-sm mt-3 leading-relaxed text-pretty font-medium max-w-lg">
                   Vote no melhor prata da casa das equipes finalistas (Azuup x Campinense) do Campeonato Municipal de Morro do Chapéu - BA 2026!
                 </p>
               </div>
@@ -587,15 +587,15 @@ export default function App() {
             <div className="p-8 md:p-10 bg-white">
               {/* Informative text below banner/header */}
               {hasBanner && (
-                <div className="mb-6 bg-emerald-50 border border-emerald-100/50 rounded-2xl p-4 shadow-sm">
-                  <p className="text-emerald-900 text-xs md:text-sm font-semibold text-center leading-relaxed">
-                    Escolha seu favorito entre as equipes finalistas do Campeonato Municipal de <strong className="font-black">Morro do Chapéu - BA 2026</strong>!
+                <div className="mb-6 bg-blue-50 border border-blue-100/50 rounded-2xl p-4 shadow-sm">
+                  <p className="text-blue-900 text-xs md:text-sm font-semibold text-center leading-relaxed text-pretty">
+                    Escolha seu favorito entre as equipes finalistas do Campeonato Municipal de <strong className="font-black text-blue-950 drop-shadow-sm">Morro do Chapéu - BA 2026</strong>!
                   </p>
                 </div>
               )}
 
               <div className="text-center mb-8">
-                <h3 className="text-xl font-black text-slate-900 mb-2 font-display">Identifique-se para votar</h3>
+                <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-2 font-display text-balance tracking-tight">Identifique-se para Votar</h3>
               </div>
 
               {/* Login Google Auth Form */}

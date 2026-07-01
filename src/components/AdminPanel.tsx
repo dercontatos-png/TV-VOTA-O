@@ -873,10 +873,10 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
         <div className="border-b-4 border-slate-900 pb-5 mb-6">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-black uppercase tracking-tight text-slate-900">
+              <h1 className="text-2xl font-black uppercase tracking-tight text-slate-900 text-balance leading-tight">
                 Boletim Oficial de Apuração
               </h1>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-0.5">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1 text-balance">
                 Votação Craque Prata da Casa • Campeonato Municipal 2026
               </p>
               <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">
@@ -1334,7 +1334,7 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
       </div>
 
       {/* History Table */}
-      <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-xs mb-8">
+      <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-xs mb-8 print:hidden">
         <h3 className="text-base font-extrabold text-gray-900 border-b border-gray-100 pb-3 mb-4">
           Últimos Votos Registrados
         </h3>

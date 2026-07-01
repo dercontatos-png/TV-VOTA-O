@@ -200,7 +200,7 @@ export default function VotingPanel({
         {/* Voting Question / Question of the hour */}
         <div className="relative z-10 w-full max-w-4xl mx-auto mt-6 text-center px-4">
           <div className="relative">
-            <h2 className="text-sm md:text-base font-bold tracking-widest text-blue-200 uppercase leading-relaxed drop-shadow-md max-w-3xl mx-auto" id="question-text">
+            <h2 className="text-sm md:text-base font-bold tracking-widest text-blue-200 uppercase leading-relaxed drop-shadow-md max-w-3xl mx-auto text-balance" id="question-text">
               Vote no Craque Prata da Casa
             </h2>
           </div>
@@ -247,28 +247,34 @@ export default function VotingPanel({
 
       {/* Sponsor Banner */}
       {config?.sponsorName && (
-        <div className="mb-8 bg-gradient-to-r from-amber-500/10 via-amber-100 to-amber-50 border border-amber-200 rounded-3xl p-6 md:p-8 shadow-sm flex flex-col sm:flex-row items-center gap-6 md:gap-10 text-center sm:text-left">
+        <div className="mb-8 bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 border border-blue-700/50 rounded-3xl p-6 md:p-8 shadow-xl flex flex-col sm:flex-row items-center gap-6 md:gap-10 text-center sm:text-left text-white overflow-hidden relative">
+          {/* Abstract elements */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500/20 rounded-full blur-2xl pointer-events-none"></div>
+
           {config.sponsorLogoUrl ? (
-            <div className="w-32 h-32 sm:w-48 sm:h-48 shrink-0 flex items-center justify-center">
+            <div className="w-28 h-28 sm:w-40 sm:h-40 shrink-0 flex items-center justify-center relative z-10 bg-white/10 rounded-3xl p-4 border border-white/20 backdrop-blur-sm">
               <img src={config.sponsorLogoUrl} alt={config.sponsorName} className="max-w-full max-h-full object-contain drop-shadow-md" />
             </div>
           ) : (
-            <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl bg-amber-100 border border-amber-200 shrink-0 flex items-center justify-center shadow-sm">
-              <Trophy className="w-10 h-10 text-amber-500" />
+            <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-3xl bg-gradient-to-br from-blue-500 to-blue-700 border border-blue-400/30 shrink-0 flex items-center justify-center shadow-lg relative z-10">
+              <Trophy className="w-10 h-10 text-white drop-shadow-md" />
             </div>
           )}
           
-          <div>
-            <span className="text-xs font-black uppercase tracking-widest text-amber-600 bg-amber-200/50 px-3 py-1.5 rounded-full border border-amber-300/30 shadow-sm">
+          <div className="relative z-10">
+            <span className="text-[10px] md:text-xs font-black uppercase tracking-[0.2em] text-blue-200 bg-blue-950/50 px-4 py-1.5 rounded-full border border-blue-400/30 shadow-sm inline-block mb-4">
               Oferecimento Especial
             </span>
-            <h3 className="text-2xl sm:text-4xl font-black text-slate-800 mt-4 leading-tight">
+            <h3 className="text-3xl sm:text-4xl md:text-5xl font-black text-white leading-tight font-display tracking-tight text-balance drop-shadow-sm">
               {config.sponsorName}
             </h3>
             {config.sponsorPrize && (
-              <p className="text-base sm:text-lg text-slate-700 mt-2 font-medium">
-                Prêmio de <strong className="text-amber-600 font-black">{config.sponsorPrize}</strong> para o jogador mais votado!
-              </p>
+              <div className="mt-4 bg-white/10 border border-white/10 rounded-2xl p-4 backdrop-blur-sm inline-block">
+                <p className="text-sm sm:text-base text-blue-100 font-medium text-balance">
+                  Prêmio de <strong className="text-amber-400 font-black text-lg drop-shadow-md">{config.sponsorPrize}</strong> para o jogador mais votado!
+                </p>
+              </div>
             )}
           </div>
         </div>

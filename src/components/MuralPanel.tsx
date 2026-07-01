@@ -133,16 +133,17 @@ export function MuralPanel({ staticPlayers, staticConfig }: MuralPanelProps = {}
           </div>
           
           {config?.sponsorName && (
-            <div className="bg-amber-900/40 backdrop-blur-md border border-amber-500/30 rounded-xl p-3 shadow-2xl flex items-center gap-4 shrink-0 max-w-sm">
-              <div className="flex flex-col">
-                <span className="text-[9px] font-black text-amber-400 uppercase tracking-widest leading-none mb-1">
+            <div className="bg-blue-900/60 backdrop-blur-md border border-blue-400/30 rounded-xl p-3 shadow-2xl flex items-center gap-4 shrink-0 max-w-sm relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
+              <div className="flex flex-col relative z-10">
+                <span className="text-[9px] font-black text-blue-300 uppercase tracking-[0.2em] leading-none mb-1">
                   OFERECIMENTO
                 </span>
-                <span className="text-sm font-black text-white uppercase tracking-wider leading-tight">
+                <span className="text-sm font-black text-white uppercase tracking-wider leading-tight text-balance">
                   {config.sponsorName}
                 </span>
                 {config.sponsorPrize && (
-                  <span className="text-xs font-bold text-amber-200 mt-0.5">
+                  <span className="text-xs font-bold text-blue-200 mt-0.5">
                     PRÊMIO: {config.sponsorPrize}
                   </span>
                 )}
