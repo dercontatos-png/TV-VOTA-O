@@ -287,6 +287,18 @@ export async function getVotesHistory(limitCount = 10): Promise<Vote[]> {
   }
 }
 
+// 7b. Get ALL votes from Firestore for statistics and voter frequency count
+export async function getAllVotes(): Promise<Vote[]> {
+  try {
+    const votesCol = collection(db, 'votes');
+    const snapshot = await getDocs(votesCol);
+    return snapshot.docs.map(doc => doc.data() as Vote);
+  } catch (error) {
+    console.error("Error fetching all votes:", error);
+    return [];
+  }
+}
+
 // 8. Reset all votes
 export async function resetAllVotes(): Promise<void> {
   try {

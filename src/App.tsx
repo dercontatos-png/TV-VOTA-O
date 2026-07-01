@@ -510,19 +510,7 @@ export default function App() {
           {/* Main Branding Header with TV Logo if set */}
           <div className="mb-6 flex flex-col items-center text-center px-4">
             {config?.logoPrincipal ? (
-              <div 
-                onClick={() => {
-                  setAdminClickCount(c => {
-                    if (c + 1 >= 5) {
-                      setView('admin');
-                      window.location.hash = 'admin';
-                      return 0;
-                    }
-                    return c + 1;
-                  });
-                }}
-                className="bg-black/15 backdrop-blur-xs p-3.5 rounded-2xl border border-white/10 shadow-sm mb-4 transition-all hover:scale-105 flex items-center justify-center cursor-pointer select-none"
-              >
+              <div className="bg-black/15 backdrop-blur-xs p-3.5 rounded-2xl border border-white/10 shadow-sm mb-4 transition-all hover:scale-105 flex items-center justify-center select-none">
                 <img 
                   src={config.logoPrincipal} 
                   alt="TV Logo" 
@@ -531,36 +519,12 @@ export default function App() {
                 />
               </div>
             ) : (
-              <div 
-                onClick={() => {
-                  setAdminClickCount(c => {
-                    if (c + 1 >= 5) {
-                      setView('admin');
-                      window.location.hash = 'admin';
-                      return 0;
-                    }
-                    return c + 1;
-                  });
-                }}
-                className="w-16 h-16 bg-white rounded-3xl shadow-xl flex items-center justify-center mb-3 border border-slate-100 transition-transform hover:scale-105 cursor-pointer"
-              >
+              <div className="w-16 h-16 bg-white rounded-3xl shadow-xl flex items-center justify-center mb-3 border border-slate-100 transition-transform hover:scale-105">
                 <Trophy className="w-8 h-8" style={{ color: dynamicColor }} />
               </div>
             )}
             
-            <h1 
-              onClick={() => {
-                setAdminClickCount(c => {
-                  if (c + 1 >= 5) {
-                    setView('admin');
-                    window.location.hash = 'admin';
-                    return 0;
-                  }
-                  return c + 1;
-                });
-              }}
-              className="text-2xl md:text-3xl font-black text-white font-display tracking-tight leading-tight uppercase drop-shadow-md cursor-pointer select-none"
-            >
+            <h1 className="text-2xl md:text-3xl font-black text-white font-display tracking-tight leading-tight uppercase drop-shadow-md select-none">
               Prata da Casa
             </h1>
             <p className="text-white/90 text-xs font-black uppercase tracking-widest mt-1 bg-black/10 px-3 py-1 rounded-full border border-white/10 select-none">

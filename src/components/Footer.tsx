@@ -49,7 +49,7 @@ export default function Footer({ onNavigate, isAdmin, onLogin }: FooterProps) {
             )}
           </button>
 
-          {isAdmin ? (
+          {isAdmin && (
             <button
               id="footer-admin-link"
               onClick={() => onNavigate('admin')}
@@ -57,15 +57,6 @@ export default function Footer({ onNavigate, isAdmin, onLogin }: FooterProps) {
             >
               <Key className="w-3.5 h-3.5 text-blue-400" />
               <span>Acessar Painel</span>
-            </button>
-          ) : (
-            <button
-              id="footer-admin-login-link"
-              onClick={() => onNavigate('admin')}
-              className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-white hover:bg-slate-800 px-3.5 py-2 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-slate-700"
-            >
-              <Key className="w-3.5 h-3.5" />
-              <span>Área do Organizador</span>
             </button>
           )}
         </div>

@@ -5,7 +5,7 @@ import {
   Link, Copy, Check
 } from 'lucide-react';
 import { Player, SystemConfig, Vote } from '../types';
-import { addPlayer, updatePlayer, deletePlayer, resetAllVotes, getVotesHistory } from '../dbService';
+import { addPlayer, updatePlayer, deletePlayer, resetAllVotes, getVotesHistory, getAllVotes } from '../dbService';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 const PRESET_PLAYERS = [
@@ -57,6 +57,7 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
   const [configMsg, setConfigMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const [votesHistory, setVotesHistory] = useState<Vote[]>([]);
+  const [allVotes, setAllVotes] = useState<Vote[]>([]);
 
   const [selectedPlayerLink, setSelectedPlayerLink] = useState('');
   const [generatedLink, setGeneratedLink] = useState(window.location.origin + '?vote=true');
@@ -96,11 +97,29 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
 
   const loadVotesHistory = async () => {
     try {
-      const history = await getVotesHistory(50);
+      const history = await getVotesHistory(100);
       setVotesHistory(history);
+      const all = await getAllVotes();
+      setAllVotes(all);
     } catch (e) {
       console.error(e);
     }
+  };
+
+  const getVoterVoteCount = (vote: Vote) => {
+    const listToSearch = allVotes.length > 0 ? allVotes : votesHistory;
+    if (!listToSearch || listToSearch.length === 0) return 1;
+    
+    const phone = vote.voterPhone;
+    const id = vote.voterId;
+    
+    if (phone && phone !== 'Não informado' && phone !== 'N/A') {
+      return listToSearch.filter(v => v.voterPhone === phone).length;
+    }
+    if (id) {
+      return listToSearch.filter(v => v.voterId === id).length;
+    }
+    return 1;
   };
 
   const handlePrintPDF = () => {
@@ -785,7 +804,20 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
                       <td className="py-3 text-xs text-gray-500 font-mono">
                         {new Date(vote.timestamp).toLocaleString('pt-BR')}
                       </td>
-                      <td className="py-3 font-semibold text-gray-800">{vote.voterName || 'Anônimo'}</td>
+                      <td className="py-3">
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-gray-800">{vote.voterName || 'Anônimo'}</span>
+                          {getVoterVoteCount(vote) > 1 ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] text-amber-600 font-extrabold mt-0.5">
+                              ⚠️ Votou {getVoterVoteCount(vote)}x no total
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[9px] text-slate-400 font-bold mt-0.5">
+                              ✓ 1º voto
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="py-3 font-mono text-xs text-gray-500">{vote.voterPhone || 'N/A'}</td>
                       <td className="py-3 font-bold text-emerald-700">{player?.name || 'Desconhecido'}</td>
                     </tr>
