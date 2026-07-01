@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Plus, Edit2, Trash2, KeyRound, LogOut, RefreshCw, 
   Upload, Shield, FileImage, ClipboardList, Info, HelpCircle, Eye, Download,
-  Link, Copy, Check
+  Link, Copy, Check, Monitor, ExternalLink
 } from 'lucide-react';
 import { Player, SystemConfig, Vote } from '../types';
 import { addPlayer, updatePlayer, deletePlayer, resetAllVotes, getVotesHistory, getAllVotes } from '../dbService';
@@ -655,9 +655,41 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
               </div>
             </div>
             
-            <p className="text-[10px] text-slate-400 text-center leading-relaxed">
-              Dica: O link geral abre a votação para todos os atletas. O link recomendado já abre destacando o jogador escolhido.
-            </p>
+            <div className="pt-4 border-t border-slate-800 mt-2">
+              <label className="block text-[10px] font-black uppercase tracking-wider text-amber-400 mb-1.5 flex items-center gap-1.5">
+                <Monitor className="w-3.5 h-3.5" /> Link do Mural (vMix / OBS)
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={`${window.location.origin}${window.location.pathname}?mural=true`}
+                  className="bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 font-mono flex-grow focus:outline-hidden opacity-80"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?mural=true`);
+                    alert("Link do Mural copiado!");
+                  }}
+                  className="bg-slate-800 hover:bg-slate-700 text-white p-2.5 rounded-xl transition-colors cursor-pointer shrink-0"
+                  title="Copiar Link do Mural"
+                >
+                  <Copy className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.open(`${window.location.origin}${window.location.pathname}?mural=true`, '_blank')}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white p-2.5 rounded-xl transition-colors cursor-pointer shrink-0 shadow-sm"
+                  title="Abrir Mural em nova aba"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-400 text-left mt-2 leading-relaxed">
+                Este link exibe os resultados em tempo real, tela cheia com fundo limpo. Use como <strong>Browser Source</strong> na transmissão ao vivo.
+              </p>
+            </div>
           </div>
         </div>
       </div>

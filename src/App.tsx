@@ -4,6 +4,7 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import VotingPanel from './components/VotingPanel';
 import AdminPanel from './components/AdminPanel';
+import { MuralPanel } from './components/MuralPanel';
 import { Player, SystemConfig, VoterInfo } from './types';
 import { getPlayers, castVote, hasVotedToday, getBahiaDateStr, getSystemConfig, updateSystemConfig } from './dbService';
 import { auth, googleProvider } from './firebase';
@@ -81,8 +82,9 @@ export default function App() {
   const urlParams = new URLSearchParams(window.location.search);
   const isAdminParam = urlParams.has('admin') || window.location.hash === '#admin';
   const isSharedLink = urlParams.has('vote') || urlParams.has('player') || urlParams.has('p');
+  const isMuralParam = urlParams.has('mural');
 
-  const [view, setView] = useState<'voting' | 'admin'>(isAdminParam ? 'admin' : 'voting');
+  const [view, setView] = useState<'voting' | 'admin' | 'mural'>(isMuralParam ? 'mural' : (isAdminParam ? 'admin' : 'voting'));
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [isVoting, setIsVoting] = useState(false);
@@ -553,6 +555,10 @@ export default function App() {
         </div>
       </div>
     );
+  }
+
+  if (view === 'mural') {
+    return <MuralPanel />;
   }
 
   return (
