@@ -119,12 +119,6 @@ export default function App() {
     ? `voter_${voterInfo.id}`
     : getOrCreateVoterId();
 
-  // Voter login with Name and Phone states (Force phone by default, no google tab!)
-  const [loginMethod, setLoginMethod] = useState<'google' | 'phone'>('phone');
-  const [voterNameInput, setVoterNameInput] = useState('');
-  const [voterPhoneInput, setVoterPhoneInput] = useState('');
-  const [phoneError, setPhoneError] = useState<string | null>(null);
-
   // Voting restriction states
   const [votedToday, setVotedToday] = useState(false);
   const [votedPlayerId, setVotedPlayerId] = useState<string | undefined>(undefined);
@@ -173,71 +167,16 @@ export default function App() {
         // to be secure, if firebase says not logged in, we should clear it.
         setVoterInfo(null);
         localStorage.removeItem('craque_voter_info');
-        if (isSharedLink) {
-          setView('voting');
-        } else {
+        if (isAdminParam) {
           setView('admin');
+        } else {
+          setView('voting');
         }
       }
       setCheckingAdmin(false);
     });
     return () => unsubscribe();
   }, [isSharedLink]);
-
-  const formatPhoneNumber = (value: string) => {
-    const num = value.replace(/\D/g, '');
-    if (num.length <= 10) {
-      return num.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3').substring(0, 14);
-    } else {
-      return num.replace(/^(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3').substring(0, 15);
-    }
-  };
-
-  const handlePhoneLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setPhoneError(null);
-
-    const trimmedName = voterNameInput.trim();
-    const cleanPhone = voterPhoneInput.replace(/\D/g, '');
-
-    if (trimmedName.length < 3) {
-      setPhoneError('Por favor, informe seu nome completo (mínimo de 3 caracteres).');
-      return;
-    }
-
-    // Ensure they provided name and surname
-    if (!trimmedName.includes(' ') || trimmedName.split(' ').filter(p => p.length > 0).length < 2) {
-      setPhoneError('Por favor, informe seu nome e sobrenome completo para identificação correta.');
-      return;
-    }
-
-    // Phone validation
-    const phoneValErr = validateBrazilianPhone(voterPhoneInput);
-    if (phoneValErr) {
-      setPhoneError(phoneValErr);
-      return;
-    }
-
-    // Save voter info deterministically
-    const voterPhoneId = 'phone_' + cleanPhone;
-    const vInfo: VoterInfo = {
-      id: voterPhoneId,
-      name: trimmedName,
-      email: '',
-      phone: voterPhoneInput
-    };
-
-    setVoterInfo(vInfo);
-    localStorage.setItem('craque_voter_info', JSON.stringify(vInfo));
-    
-    // Smooth reset fields
-    setVoterNameInput('');
-    setVoterPhoneInput('');
-    setPhoneError(null);
-    
-    // Redirect / confirm
-    setView('voting');
-  };
 
   // Fetch IP & Location on mount
   useEffect(() => {
@@ -583,60 +522,26 @@ export default function App() {
               <div className="text-center mb-6">
                 <h3 className="text-lg font-black text-slate-900 mb-1.5 font-display">Identifique-se para votar</h3>
                 <p className="text-slate-500 text-xs leading-relaxed max-w-xs mx-auto">
-                  Para garantir a segurança, validade e controle de apenas 1 voto diário por pessoa, insira seus dados.
+                  Para garantir a segurança, validade e controle anti-fraudes dos votos, o login com o Google é obrigatório.
                 </p>
               </div>
 
-              {/* Login Form */}
-              <form onSubmit={handlePhoneLogin} className="space-y-4">
-                {phoneError && (
+              {/* Login Google Auth Form */}
+              <div className="space-y-4">
+                {authError && (
                   <div className="p-3 bg-rose-50 border border-rose-200 text-rose-600 text-xs font-bold rounded-xl text-center leading-relaxed animate-fade-in">
-                    {phoneError}
+                    {authError}
                   </div>
                 )}
                 
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5 ml-1">
-                    Seu Nome Completo
-                  </label>
-                  <div className="relative">
-                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input
-                      type="text"
-                      required
-                      placeholder="Digite seu nome e sobrenome"
-                      value={voterNameInput}
-                      onChange={(e) => setVoterNameInput(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-11 pr-4 text-sm text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-[var(--primary-theme-color)] focus:bg-white transition-all font-semibold"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5 ml-1">
-                    Seu WhatsApp / Telefone
-                  </label>
-                  <div className="relative">
-                    <Smartphone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input
-                      type="tel"
-                      required
-                      placeholder="(74) 99999-9999"
-                      value={voterPhoneInput}
-                      onChange={(e) => setVoterPhoneInput(formatPhoneNumber(e.target.value))}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-11 pr-4 text-sm text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-[var(--primary-theme-color)] focus:bg-white transition-all font-mono font-bold"
-                    />
-                  </div>
-                </div>
-
                 <button
-                  type="submit"
-                  className="w-full hover:brightness-110 text-slate-950 font-black py-4 px-4 rounded-xl shadow-md transition-all hover:shadow-lg hover:-translate-y-0.5 cursor-pointer text-xs uppercase tracking-widest mt-4 text-center"
-                  style={{ backgroundColor: '#10b981' }} // Use Emerald green for the primary action to confirm
+                  onClick={handleGoogleLogin}
+                  className="w-full bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-black py-4 px-4 rounded-xl shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 cursor-pointer text-xs tracking-widest mt-4 text-center flex items-center justify-center gap-3"
                 >
-                  Confirmar e Acessar Votação
+                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+                  ENTRAR COM O GOOGLE
                 </button>
-              </form>
+              </div>
               
               <div className="mt-8 flex items-center gap-2 text-[11px] font-black text-slate-400 justify-center w-full pt-5 border-t border-slate-100">
                 <UserCheck className="w-4 h-4 text-emerald-500 shrink-0" />
