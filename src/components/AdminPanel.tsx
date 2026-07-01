@@ -535,6 +535,9 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
 
   useEffect(() => {
     loadVotesHistory();
+    // Poll for vote history every 3 seconds
+    const interval = setInterval(loadVotesHistory, 3000);
+    return () => clearInterval(interval);
   }, [players]);
 
   const loadVotesHistory = async () => {
@@ -1372,11 +1375,12 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
                 <th className="py-2">Data/Hora</th>
                 <th className="py-2">Eleitor / Identificador</th>
                 <th className="py-2">Jogador Votado</th>
+                <th className="py-2 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-sm">
               {votesHistory.length === 0 ? (
-                <tr><td colSpan={3} className="text-center py-4 text-gray-400">Nenhum voto registrado ainda.</td></tr>
+                <tr><td colSpan={4} className="text-center py-4 text-gray-400">Nenhum voto registrado ainda.</td></tr>
               ) : (
                 votesHistory.map((vote, idx) => {
                   const player = players.find(p => p.id === vote.playerId);
@@ -1402,6 +1406,25 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
                         </div>
                       </td>
                       <td className="py-3 font-bold text-emerald-700">{player?.name || 'Desconhecido'}</td>
+                      <td className="py-3 text-right">
+                        <button
+                          onClick={async () => {
+                            if (window.confirm('Tem certeza que deseja apagar este voto?')) {
+                              try {
+                                const { deleteVote } = await import('../dbService');
+                                await deleteVote(vote.id);
+                                loadVotesHistory();
+                              } catch (e: any) {
+                                alert(e.message || 'Erro ao apagar voto.');
+                              }
+                            }
+                          }}
+                          className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition-colors"
+                          title="Apagar Voto"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                        </button>
+                      </td>
                     </tr>
                   );
                 })

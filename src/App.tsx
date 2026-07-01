@@ -281,10 +281,10 @@ export default function App() {
     // Initial load
     fetchFreshData(true);
 
-    // Poll every 10 seconds to keep the interface updated
+    // Poll every 3 seconds to keep the interface updated in near real-time
     intervalId = setInterval(() => {
       fetchFreshData(false);
-    }, 10000);
+    }, 3000);
 
     return () => {
       clearInterval(intervalId);

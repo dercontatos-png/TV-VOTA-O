@@ -1,7 +1,7 @@
 import { Player, Vote, SystemConfig } from './types';
 import { castVoteInSupabase, hasVotedTodayInSupabase, getVotesFromSupabase } from './supabase';
-
-const API_BASE = '/api';
+import { db } from './firebase';
+import { collection, doc, getDocs, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 
 // Cache of the last reset time, initialized from localStorage if in a browser context
 const storedReset = typeof window !== 'undefined' ? localStorage.getItem('craque_last_reset') : null;
@@ -20,14 +20,23 @@ export function getBahiaDateStr(): string {
 }
 
 export async function getPlayers(): Promise<Player[]> {
-  const res = await fetch(`${API_BASE}/players`);
-  if (!res.ok) throw new Error('Failed to fetch players');
-  const playersList: Player[] = await res.json();
+  const playersList: Player[] = [];
+  try {
+    const playersCol = collection(db, 'players');
+    const snapshot = await getDocs(playersCol);
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      playersList.push({ id: doc.id, ...data } as Player);
+    });
+  } catch (err) {
+    console.error("Error fetching players from Firestore:", err);
+  }
 
   try {
     // Dynamically retrieve real-time votes from Supabase and count them in-memory
     const votes = await getVotesFromSupabase();
     const countsMap: Record<string, number> = {};
+
     for (const v of votes) {
       if (v && v.player_id) {
         // Filter out votes older than lastResetAt timestamp
@@ -53,28 +62,22 @@ export async function getPlayers(): Promise<Player[]> {
 }
 
 export async function addPlayer(name: string, team: string, position?: string, imageUrl?: string, imageFit?: 'cover'|'contain', imagePosition?: 'top'|'center'|'bottom', order?: number): Promise<string> {
-  const res = await fetch(`${API_BASE}/players`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, team, position, imageUrl, imageFit, imagePosition, order })
+  const newPlayerId = 'p' + Date.now();
+  const playerDoc = doc(db, 'players', newPlayerId);
+  await setDoc(playerDoc, {
+    name, team, position, imageUrl, imageFit, imagePosition, order, createdAt: Date.now()
   });
-  if (!res.ok) throw new Error('Failed to add player');
-  const data = await res.json();
-  return data.id;
+  return newPlayerId;
 }
 
 export async function updatePlayer(id: string, updates: Partial<Player>): Promise<void> {
-  const res = await fetch(`${API_BASE}/players/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(updates)
-  });
-  if (!res.ok) throw new Error('Failed to update player');
+  const playerDoc = doc(db, 'players', id);
+  await updateDoc(playerDoc, updates);
 }
 
 export async function deletePlayer(id: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/players/${id}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error('Failed to delete player');
+  const playerDoc = doc(db, 'players', id);
+  await deleteDoc(playerDoc);
 }
 
 export async function hasVotedToday(voterId: string): Promise<{ voted: boolean; playerVotedId?: string }> {
@@ -101,7 +104,6 @@ export async function getVotesHistory(limitCount = 10): Promise<Vote[]> {
     });
 
     if (error) throw error;
-
     return (data || []).map(v => ({
       id: String(v.id),
       playerId: v.player_id,
@@ -116,10 +118,8 @@ export async function getVotesHistory(limitCount = 10): Promise<Vote[]> {
       userAgent: v.user_agent || 'N/A'
     }));
   } catch (err) {
-    console.error("Failed to fetch vote history from Supabase, falling back to server API:", err);
-    const res = await fetch(`${API_BASE}/votes/history?limit=${limitCount}`);
-    if (!res.ok) throw new Error('Failed to fetch history');
-    return res.json();
+    console.error("Failed to fetch vote history from Supabase:", err);
+    return [];
   }
 }
 
@@ -132,7 +132,6 @@ export async function getAllVotes(): Promise<Vote[]> {
     });
 
     if (error) throw error;
-
     return (data || []).map(v => ({
       id: String(v.id),
       playerId: v.player_id,
@@ -147,10 +146,8 @@ export async function getAllVotes(): Promise<Vote[]> {
       userAgent: v.user_agent || 'N/A'
     }));
   } catch (err) {
-    console.error("Failed to fetch all votes from Supabase, falling back to server:", err);
-    const res = await fetch(`${API_BASE}/votes/all`);
-    if (!res.ok) throw new Error('Failed to fetch all votes');
-    return res.json();
+    console.error("Failed to fetch all votes from Supabase:", err);
+    return [];
   }
 }
 
@@ -161,20 +158,23 @@ export async function resetAllVotes(): Promise<void> {
       m.supabase.from('votos').delete().neq('id', 0) // Delete all rows
     );
     if (error) {
-      console.warn("Supabase votes deletion failed (ignoring since we use time-based client reset filtering):", error);
+      console.warn("Supabase votes deletion failed:", error);
     }
   } catch (err) {
     console.error("Exception clearing Supabase votes:", err);
   }
 
-  // Also reset local/firebase fallbacks
-  const res = await fetch(`${API_BASE}/votes/reset`, { method: 'POST' });
-  if (!res.ok) throw new Error('Failed to reset votes');
-
   // Update local cache of lastResetAt to current timestamp so we immediately start filtering
   lastResetAtCache = Date.now();
   if (typeof window !== 'undefined') {
     localStorage.setItem('craque_last_reset', lastResetAtCache.toString());
+  }
+
+  try {
+    const configDoc = doc(db, 'settings', 'config');
+    await updateDoc(configDoc, { lastResetAt: lastResetAtCache });
+  } catch (e) {
+    console.error("Could not update lastResetAt in Firestore", e);
   }
 }
 
@@ -195,32 +195,45 @@ export const DEFAULT_CONFIG: SystemConfig = {
 
 export async function getSystemConfig(): Promise<SystemConfig> {
   try {
-    const res = await fetch(`${API_BASE}/settings`);
-    if (!res.ok) return DEFAULT_CONFIG;
-    const config: SystemConfig = await res.json();
+    const configDoc = doc(db, 'settings', 'config');
+    const docSnap = await getDoc(configDoc);
+    
+    if (docSnap.exists()) {
+      const config = docSnap.data() as SystemConfig;
+      if (config && typeof config.lastResetAt === 'number') {
+        lastResetAtCache = config.lastResetAt;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('craque_last_reset', config.lastResetAt.toString());
+        }
+      }
+      return { ...DEFAULT_CONFIG, ...config };
+    }
+    
+    return DEFAULT_CONFIG;
+  } catch (error) {
+    console.error("Failed to fetch settings from Firestore:", error);
+    return DEFAULT_CONFIG;
+  }
+}
+
+export async function updateSystemConfig(config: SystemConfig): Promise<void> {
+  try {
+    const configDoc = doc(db, 'settings', 'config');
+    await setDoc(configDoc, config, { merge: true });
+    
     if (config && typeof config.lastResetAt === 'number') {
       lastResetAtCache = config.lastResetAt;
       if (typeof window !== 'undefined') {
         localStorage.setItem('craque_last_reset', config.lastResetAt.toString());
       }
     }
-    return config;
-  } catch (error) {
-    return DEFAULT_CONFIG;
+  } catch (err) {
+    console.error("Failed to update system config in Firestore:", err);
+    throw new Error('Failed to update config');
   }
 }
 
-export async function updateSystemConfig(config: SystemConfig): Promise<void> {
-  const res = await fetch(`${API_BASE}/settings`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(config)
-  });
-  if (!res.ok) throw new Error('Failed to update config');
-  if (config && typeof config.lastResetAt === 'number') {
-    lastResetAtCache = config.lastResetAt;
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('craque_last_reset', config.lastResetAt.toString());
-    }
-  }
+export async function deleteVote(voteId: string): Promise<void> {
+  const { deleteVoteInSupabase } = await import('./supabase');
+  await deleteVoteInSupabase(voteId);
 }

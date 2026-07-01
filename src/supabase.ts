@@ -136,3 +136,15 @@ export async function getVotesFromSupabase(): Promise<{ player_id: string; creat
     return [];
   }
 }
+
+export async function deleteVoteInSupabase(voteId: string): Promise<void> {
+  const { error } = await supabase
+    .from('votos')
+    .delete()
+    .eq('id', voteId);
+
+  if (error) {
+    console.error("Error deleting vote in Supabase:", error);
+    throw new Error(`Erro ao apagar voto: ${error.message}`);
+  }
+}

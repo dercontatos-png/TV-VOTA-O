@@ -41,7 +41,7 @@ export function MuralPanel({ staticPlayers, staticConfig }: MuralPanelProps = {}
     loadData();
 
     // Poll every 5 seconds for the live mural TV display
-    const interval = setInterval(loadData, 5000);
+    const interval = setInterval(loadData, 3000);
 
     return () => {
       clearInterval(interval);
