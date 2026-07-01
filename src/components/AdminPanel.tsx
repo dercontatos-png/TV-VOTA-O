@@ -109,7 +109,7 @@ const ExportNodeTV = ({ config, totalVotes, players }: any) => {
         </div>
 
         {/* Bottom Section: Bars */}
-        <div style={{ display: 'flex', gap: '28px', alignItems: 'flex-end', justifyContent: 'flex-start', paddingLeft: '0px', marginLeft: '-40px', height: '580px', paddingBottom: '0' }}>
+        <div style={{ display: 'flex', gap: '28px', alignItems: 'flex-end', justifyContent: 'flex-start', paddingLeft: '0px', marginLeft: '-60px', height: '580px', paddingBottom: '0' }}>
           {[...players].sort((a: any, b: any) => b.votesCount - a.votesCount).slice(0, 10).map((player: any, index: number, arr: any[]) => {
             const topVotes = arr[0]?.votesCount || 1;
             const heightPercentage = Math.max(15, (player.votesCount / topVotes) * 100);
@@ -214,13 +214,6 @@ const ExportNodeFeed = ({ config, totalVotes, players }: any) => {
               <div style={{ width: '2px', height: '30px', backgroundColor: 'rgba(255, 255, 255, 0.5)' }}></div>
               <span style={{ fontSize: '40px', fontWeight: 900, color: '#ffffff', fontFamily: 'monospace' }}>{totalVotes.toLocaleString('pt-BR')}</span>
             </div>
-
-            {config?.sponsorName && (
-               <div style={{ background: 'rgba(0, 51, 102, 0.5)', border: '1px solid rgba(147, 197, 253, 0.3)', borderRadius: '16px', padding: '12px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '20px' }}>
-                 <span style={{ fontSize: '12px', fontWeight: 900, color: '#93c5fd', textTransform: 'uppercase', letterSpacing: '2px' }}>OFERECIMENTO</span>
-                 <span style={{ fontSize: '24px', fontWeight: 900, color: 'white', textTransform: 'uppercase', margin: '4px 0' }}>{config.sponsorName}</span>
-               </div>
-            )}
           </div>
         </div>
 
