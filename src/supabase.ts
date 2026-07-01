@@ -1,9 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = 'https://dvpnwzinajfqxmfylkiy.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR2cG53emluYWpmcXhtZnlsa2l5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MTA0NzIsImV4cCI6MjA5ODQ4NjQ3Mn0.zyRm4dkQmthVvnKdg0fLT9KNm0pdHDqivbYRvxaO2hI';
+const supabaseUrl = "https://dvpnwzinajfqxmfylkiy.supabase.co";
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR2cG53emluYWpmcXhtZnlsa2l5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MTA0NzIsImV4cCI6MjA5ODQ4NjQ3Mn0.zyRm4dkQmthVvnKdg0fLT9KNm0pdHDqivbYRvxaO2hI";
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Helper to get Bahia timezone date string (YYYY-MM-DD)
 export function getBahiaDateStr(): string {
@@ -170,6 +170,15 @@ export async function getPlayersFromSupabase() {
 
 export async function upsertPlayerInSupabase(player: any) {
   try {
+    // Serialize extra fields into the logo_url field to preserve them under basic table schema
+    const logoUrlData = JSON.stringify({
+      url: player.imageUrl || '',
+      position: player.position || '',
+      order: player.order || 0,
+      imageFit: player.imageFit || 'cover',
+      imagePosition: player.imagePosition || 'top'
+    });
+
     const { error } = await supabase
       .from('jogadores')
       .upsert([
@@ -177,7 +186,7 @@ export async function upsertPlayerInSupabase(player: any) {
           id: player.id,
           nome: player.name,
           time: player.team,
-          logo_url: player.imageUrl || '',
+          logo_url: logoUrlData,
           criado_em: player.createdAt ? new Date(player.createdAt).toISOString() : new Date().toISOString()
         }
       ]);
@@ -208,6 +217,27 @@ export async function deletePlayerInSupabase(id: string) {
 }
 
 export async function getSettingsFromSupabase() {
+  // 1. Try to fetch from the 'configuracoes' table first
+  try {
+    const { data, error } = await supabase
+      .from('configuracoes')
+      .select('*')
+      .eq('id', 'system_config')
+      .single();
+    
+    if (!error && data) {
+      if (data.dados) {
+        return JSON.parse(data.dados);
+      }
+      if (data.nome) {
+        return JSON.parse(data.nome);
+      }
+    }
+  } catch (err) {
+    // Silently proceed to fallback
+  }
+
+  // 2. Fallback to 'jogadores' table with id 'system_config'
   try {
     const { data, error } = await supabase
       .from('jogadores')
@@ -215,19 +245,44 @@ export async function getSettingsFromSupabase() {
       .eq('id', 'system_config')
       .single();
     
-    if (error) {
-      return null;
-    }
-    if (data && data.nome) {
-      return JSON.parse(data.nome);
+    if (!error && data) {
+      // If the data is stored in 'nome' field
+      if (data.nome) {
+        return JSON.parse(data.nome);
+      }
+      // If the data is stored in 'logo_url' field or something else
+      if (data.logo_url && data.logo_url.startsWith('{')) {
+        return JSON.parse(data.logo_url);
+      }
     }
     return null;
   } catch (err) {
+    console.error("Exception fetching settings from both tables:", err);
     return null;
   }
 }
 
 export async function upsertSettingsInSupabase(settings: any) {
+  let success = false;
+
+  // 1. Try to save to 'configuracoes' table
+  try {
+    const { error } = await supabase
+      .from('configuracoes')
+      .upsert([
+        {
+          id: 'system_config',
+          dados: JSON.stringify(settings)
+        }
+      ]);
+    if (!error) {
+      success = true;
+    }
+  } catch (err) {
+    // Silently proceed
+  }
+
+  // 2. Fallback / Sync with 'jogadores' table (stores in 'nome' column as serialized JSON)
   try {
     const { error } = await supabase
       .from('jogadores')
@@ -241,11 +296,16 @@ export async function upsertSettingsInSupabase(settings: any) {
         }
       ]);
     if (error) {
-      console.error("Error upserting settings in Supabase:", error);
-      throw error;
+      if (!success) {
+        throw error;
+      }
+    } else {
+      success = true;
     }
   } catch (err) {
-    console.error("Exception upserting settings:", err);
-    throw err;
+    if (!success) {
+      console.error("Exception upserting settings in fallback:", err);
+      throw err;
+    }
   }
 }

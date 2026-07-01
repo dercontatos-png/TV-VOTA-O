@@ -65,18 +65,39 @@ export async function getPlayers(): Promise<Player[]> {
       }
       playersList = [...DEFAULT_PLAYERS];
     } else {
-      playersList = supabasePlayers.map((p: any) => ({
-        id: p.id,
-        name: p.nome || '',
-        team: p.time || '',
-        position: '',
-        imageUrl: p.logo_url || '',
-        imageFit: 'cover',
-        imagePosition: 'top',
-        order: 0,
-        createdAt: p.criado_em ? new Date(p.criado_em).getTime() : Date.now(),
-        votesCount: 0
-      })) as Player[];
+      playersList = supabasePlayers.map((p: any) => {
+        let imageUrl = p.logo_url || '';
+        let position = '';
+        let imageFit = 'cover' as 'cover' | 'contain';
+        let imagePosition = 'top' as 'top' | 'center' | 'bottom';
+        let order = 0;
+
+        if (p.logo_url && p.logo_url.startsWith('{')) {
+          try {
+            const parsed = JSON.parse(p.logo_url);
+            imageUrl = parsed.url || '';
+            position = parsed.position || '';
+            imageFit = parsed.imageFit || 'cover';
+            imagePosition = parsed.imagePosition || 'top';
+            order = typeof parsed.order === 'number' ? parsed.order : 0;
+          } catch (e) {
+            // fallback
+          }
+        }
+
+        return {
+          id: p.id,
+          name: p.nome || '',
+          team: p.time || '',
+          position,
+          imageUrl,
+          imageFit,
+          imagePosition,
+          order,
+          createdAt: p.criado_em ? new Date(p.criado_em).getTime() : Date.now(),
+          votesCount: 0
+        };
+      }) as Player[];
     }
 
     // 2. Dynamically retrieve real-time votes from Supabase
@@ -128,7 +149,7 @@ export async function addPlayer(
   imagePosition?: 'top'|'center'|'bottom', 
   order?: number
 ): Promise<string> {
-  const id = `player_${Date.now()}`;
+  const id = crypto.randomUUID ? crypto.randomUUID() : `player_${Date.now()}`;
   const player = {
     id,
     name,
@@ -147,16 +168,11 @@ export async function addPlayer(
 }
 
 export async function updatePlayer(id: string, updates: Partial<Player>): Promise<void> {
-  // First get the player
-  const supabasePlayers = await getPlayersFromSupabase();
-  const existing = supabasePlayers.find((p: any) => p.id === id);
+  const players = await getPlayers();
+  const existing = players.find(p => p.id === id);
   if (existing) {
     const merged = { 
-      id: existing.id,
-      name: existing.nome || '',
-      team: existing.time || '',
-      imageUrl: existing.logo_url || '',
-      createdAt: existing.criado_em ? new Date(existing.criado_em).getTime() : Date.now(),
+      ...existing,
       ...updates 
     };
     await upsertPlayerInSupabase(merged);
