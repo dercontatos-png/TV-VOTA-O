@@ -1,62 +1,15 @@
-import { collection, doc, getDocs, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { Player, Vote, SystemConfig } from './types';
-import { castVoteInSupabase, hasVotedTodayInSupabase, getVotesFromSupabase, getPlayersFromSupabase, upsertPlayerInSupabase, deletePlayerInSupabase, getSettingsFromSupabase, upsertSettingsInSupabase } from './supabase';
-import { db } from './firebase';
+const fs = require('fs');
 
-// In-memory cache for Supabase votes to drastically optimize speeds and prevent API rate-limit lockouts
-let cachedSupabaseVotes: any[] | null = null;
-let lastSupabaseVotesFetchTime = 0;
-const VOTES_CACHE_TTL_MS = 8000; // Cache for 8 seconds
+let content = fs.readFileSync('src/dbService.ts', 'utf8');
 
-// Cache of the last reset time, initialized from localStorage if in a browser context
-const storedReset = typeof window !== 'undefined' ? localStorage.getItem('craque_last_reset') : null;
-let lastResetAtCache: number | undefined = storedReset ? parseInt(storedReset, 10) : undefined;
+// Replace imports from supabase
+content = content.replace(
+  "import { castVoteInSupabase, hasVotedTodayInSupabase, getVotesFromSupabase } from './supabase';",
+  "import { castVoteInSupabase, hasVotedTodayInSupabase, getVotesFromSupabase, getPlayersFromSupabase, upsertPlayerInSupabase, deletePlayerInSupabase, getSettingsFromSupabase, upsertSettingsInSupabase } from './supabase';"
+);
 
-// Default predefined players with alternating team order
-const DEFAULT_PLAYERS: Player[] = [
-  { id: 'p1', name: 'Jefinho', team: 'AZUUP', position: 'MEI (Meia)', votesCount: 0, order: 1, imageUrl: '', imageFit: 'cover', imagePosition: 'top', createdAt: 1719854130000 },
-  { id: 'p6', name: 'Marcel', team: 'Campinense', position: 'LAT (Lateral)', votesCount: 0, order: 2, imageUrl: '', imageFit: 'cover', imagePosition: 'top', createdAt: 1719854130000 },
-  { id: 'p2', name: 'Didio', team: 'AZUUP', position: 'MEI-ATAC (Meia-Atacante)', votesCount: 0, order: 3, imageUrl: '', imageFit: 'cover', imagePosition: 'top', createdAt: 1719854130000 },
-  { id: 'p7', name: 'Sujeirinha', team: 'Campinense', position: 'MEI-ATAC (Meia-Atacante)', votesCount: 0, order: 4, imageUrl: '', imageFit: 'cover', imagePosition: 'top', createdAt: 1719854130000 },
-  { id: 'p3', name: 'Gabriel', team: 'AZUUP', position: 'LAT (Lateral)', votesCount: 0, order: 5, imageUrl: '', imageFit: 'cover', imagePosition: 'top', createdAt: 1719854130000 },
-  { id: 'p8', name: 'Peep', team: 'Campinense', position: 'VOL (Volante)', votesCount: 0, order: 6, imageUrl: '', imageFit: 'cover', imagePosition: 'top', createdAt: 1719854130000 },
-  { id: 'p4', name: 'Valdevando', team: 'AZUUP', position: 'LAT (Lateral)', votesCount: 0, order: 7, imageUrl: '', imageFit: 'cover', imagePosition: 'top', createdAt: 1719854130000 },
-  { id: 'p9', name: 'Rafael', team: 'Campinense', position: 'LAT (Lateral)', votesCount: 0, order: 8, imageUrl: '', imageFit: 'cover', imagePosition: 'top', createdAt: 1719854130000 },
-  { id: 'p5', name: 'Kauê', team: 'AZUUP', position: 'GOLEIRO', votesCount: 0, order: 9, imageUrl: '', imageFit: 'cover', imagePosition: 'top', createdAt: 1719854130000 },
-  { id: 'p10', name: 'Leuzinho', team: 'Campinense', position: 'VOL (Volante)', votesCount: 0, order: 10, imageUrl: '', imageFit: 'cover', imagePosition: 'top', createdAt: 1719854130000 }
-];
-
-export function getBahiaDateStr(): string {
-  const d = new Date();
-  const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
-  const bahiaDate = new Date(utc + (3600000 * -3));
-  
-  const year = bahiaDate.getFullYear();
-  const month = String(bahiaDate.getMonth() + 1).padStart(2, '0');
-  const day = String(bahiaDate.getDate()).padStart(2, '0');
-  
-  return `${year}-${month}-${day}`;
-}
-
-/**
- * Automatically detects whether the application is running in a serverless environment (like Netlify)
- * or inside the development/preview container of Google AI Studio.
- */
-export function isClientOnly(): boolean {
-  if (typeof window === 'undefined') return false;
-  
-  // If explicitly requested via Vite environment variables
-  if (import.meta.env.VITE_NETLIFY === 'true' || import.meta.env.VITE_CLIENT_ONLY === 'true') {
-    return true;
-  }
-  
-  const host = window.location.hostname;
-  // AI Studio preview URLs end with run.app, and dev server runs on localhost
-  const isStudioPreview = host.includes('run.app') || host.includes('localhost') || host.includes('127.0.0.1');
-  return !isStudioPreview;
-}
-
-
+// getPlayers
+const newGetPlayers = `
 export async function getPlayers(): Promise<Player[]> {
   try {
     let playersList: Player[] = [];
@@ -132,8 +85,12 @@ export async function getPlayers(): Promise<Player[]> {
     return [];
   }
 }
+`;
 
+content = content.replace(/export async function getPlayers\(\): Promise<Player\[]> \{[\s\S]*?\}\s*export async function addPlayer/m, newGetPlayers + "\nexport async function addPlayer");
 
+// addPlayer
+const newAddPlayer = `
 export async function addPlayer(
   name: string, 
   team: string, 
@@ -143,7 +100,7 @@ export async function addPlayer(
   imagePosition?: 'top'|'center'|'bottom', 
   order?: number
 ): Promise<string> {
-  const id = `player_${Date.now()}`;
+  const id = \`player_\${Date.now()}\`;
   const player = {
     id,
     name,
@@ -175,8 +132,12 @@ export async function addPlayer(
     return result.id;
   }
 }
+`;
 
+content = content.replace(/export async function addPlayer\([\s\S]*?\}\s*export async function updatePlayer/m, newAddPlayer + "\nexport async function updatePlayer");
 
+// updatePlayer
+const newUpdatePlayer = `
 export async function updatePlayer(id: string, updates: Partial<Player>): Promise<void> {
   if (isClientOnly()) {
     // First get the player
@@ -187,7 +148,7 @@ export async function updatePlayer(id: string, updates: Partial<Player>): Promis
       await upsertPlayerInSupabase(merged);
     }
   } else {
-    const response = await fetch(`/api/players/${id}`, {
+    const response = await fetch(\`/api/players/\${id}\`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json'
@@ -199,13 +160,17 @@ export async function updatePlayer(id: string, updates: Partial<Player>): Promis
     }
   }
 }
+`;
 
+content = content.replace(/export async function updatePlayer\([\s\S]*?\}\s*export async function deletePlayer/m, newUpdatePlayer + "\nexport async function deletePlayer");
 
+// deletePlayer
+const newDeletePlayer = `
 export async function deletePlayer(id: string): Promise<void> {
   if (isClientOnly()) {
     await deletePlayerInSupabase(id);
   } else {
-    const response = await fetch(`/api/players/${id}`, {
+    const response = await fetch(\`/api/players/\${id}\`, {
       method: 'DELETE'
     });
     if (!response.ok) {
@@ -213,68 +178,13 @@ export async function deletePlayer(id: string): Promise<void> {
     }
   }
 }
+`;
 
-export async function hasVotedToday(voterId: string): Promise<{ voted: boolean; playerVotedId?: string }> {
-  // Query Supabase directly
-  return hasVotedTodayInSupabase(voterId, lastResetAtCache);
-}
-
-export async function castVote(
-  playerId: string, 
-  voterId: string, 
-  voterInfo?: import('./types').VoterInfo & { ipAddress?: string; locationInfo?: string }, 
-  userAgent?: string
-): Promise<void> {
-  // Cast vote directly in Supabase
-  await castVoteInSupabase(playerId, voterId, voterInfo || {}, userAgent, lastResetAtCache);
-  cachedSupabaseVotes = null; // Instantly invalidate votes cache to show updated counts
-}
-
-export async function getVotesHistory(limitCount = 10): Promise<Vote[]> {
-  try {
-    // Query directly from Supabase for total transparency and live display
-    const { data, error } = await import('./supabase').then(m => {
-      let query = m.supabase.from('votos').select('*').order('created_at', { ascending: false });
-      return query.limit(limitCount);
-    });
-
-    if (error) throw error;
-
-    return (data || []).map(v => ({
-      id: String(v.id),
-      playerId: v.player_id,
-      voterId: v.voter_id,
-      dateStr: v.date_str,
-      timestamp: v.created_at ? new Date(v.created_at).getTime() : Date.now(),
-      voterName: v.voter_name || 'Anônimo',
-      voterEmail: v.voter_email || '',
-      voterPhone: v.voter_phone || '',
-      ipAddress: v.ip_address || 'N/A',
-      locationInfo: v.location_info || 'N/A',
-      userAgent: v.user_agent || 'N/A'
-    }));
-  } catch (err) {
-    console.error("Failed to fetch vote history from Supabase:", err);
-    return [];
-  }
-}
-
-export const DEFAULT_CONFIG: SystemConfig = {
-  votingQuestion: 'Quem é o melhor "Prata da Casa"?',
-  logoAzuup: '',
-  logoCampinense: '',
-  logoPrincipal: '',
-  startDate: '',
-  endDate: '',
-  votingEnabled: true,
-  bannerUrl: '',
-  primaryColor: '#2563eb',
-  sponsorName: 'Lourival Junior',
-  sponsorPrize: 'R$ 500',
-  sponsorLogoUrl: '',
-};
+content = content.replace(/export async function deletePlayer\([\s\S]*?\}\s*export async function hasVotedToday/m, newDeletePlayer + "\nexport async function hasVotedToday");
 
 
+// getSystemConfig
+const newGetConfig = `
 export async function getSystemConfig(): Promise<SystemConfig> {
   try {
     let config: SystemConfig;
@@ -307,8 +217,12 @@ export async function getSystemConfig(): Promise<SystemConfig> {
     return DEFAULT_CONFIG;
   }
 }
+`;
 
+content = content.replace(/export async function getSystemConfig\(\): Promise<SystemConfig> \{[\s\S]*?\}\s*export async function updateSystemConfig/m, newGetConfig + "\nexport async function updateSystemConfig");
 
+// updateSystemConfig
+const newUpdateConfig = `
 export async function updateSystemConfig(config: SystemConfig): Promise<void> {
   try {
     if (isClientOnly()) {
@@ -337,8 +251,12 @@ export async function updateSystemConfig(config: SystemConfig): Promise<void> {
     throw new Error('Failed to update config');
   }
 }
+`;
 
+content = content.replace(/export async function updateSystemConfig\([\s\S]*?\}\s*export async function resetAllVotes/m, newUpdateConfig + "\nexport async function resetAllVotes");
 
+// resetAllVotes
+const newResetAllVotes = `
 export async function resetAllVotes(): Promise<void> {
   cachedSupabaseVotes = null; // Instantly invalidate votes cache
 
@@ -396,30 +314,10 @@ export async function resetAllVotes(): Promise<void> {
     localStorage.setItem('craque_last_reset', (lastResetAtCache || Date.now()).toString());
   }
 }
+`;
 
-export async function deleteVote(voteId: string, playerId?: string): Promise<void> {
-  cachedSupabaseVotes = null; // Clear cached votes to update counts instantly
+content = content.replace(/export async function resetAllVotes\(\): Promise<void> \{[\s\S]*?\}\s*export async function deleteVote/m, newResetAllVotes + "\nexport async function deleteVote");
 
-  // 1. Delete from Supabase
-  try {
-    const { deleteVoteInSupabase } = await import('./supabase');
-    await deleteVoteInSupabase(voteId);
-  } catch (err: any) {
-    console.error("Could not delete vote from Supabase:", err);
-    throw new Error(`Erro ao deletar voto no Supabase: ${err.message || err}. Certifique-se de que executou as permissões (políticas de exclusão RLS) no editor SQL do Supabase.`);
-  }
 
-  // 2. Delete from server's fallback DB / Firestore to maintain absolute sync
-  if (!isClientOnly()) {
-    try {
-      const res = await fetch(`/api/votes/${voteId}`, {
-        method: 'DELETE'
-      });
-      if (!res.ok) {
-        console.warn("Backend sync deletion responded with an error");
-      }
-    } catch (err) {
-      console.warn("Could not sync vote deletion with Express backend:", err);
-    }
-  }
-}
+fs.writeFileSync('src/dbService.ts', content);
+
