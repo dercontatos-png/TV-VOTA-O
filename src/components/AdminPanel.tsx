@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Plus, Edit2, Trash2, KeyRound, LogOut, RefreshCw, 
   Upload, Shield, FileImage, ClipboardList, Info, HelpCircle, Eye, Download,
-  Link, Copy, Check, Monitor, ExternalLink
+  Link, Copy, Check, Monitor, ExternalLink, GripVertical
 } from 'lucide-react';
 import { Player, SystemConfig, Vote } from '../types';
 import { addPlayer, updatePlayer, deletePlayer, resetAllVotes, getVotesHistory, getAllVotes } from '../dbService';
@@ -66,6 +66,9 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
   const [generatedLink, setGeneratedLink] = useState(window.location.origin + '?vote=true');
   const [linkCopied, setLinkCopied] = useState(false);
 
+  // Drag and Drop ordering state
+  const [draggedPlayerIndex, setDraggedPlayerIndex] = useState<number | null>(null);
+
   const handleCopyGeneratedLink = () => {
     navigator.clipboard.writeText(generatedLink).then(() => {
       setLinkCopied(true);
@@ -73,6 +76,48 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
     }).catch(err => {
       console.error('Failed to copy text: ', err);
     });
+  };
+
+  const sortedPlayers = [...players].sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  const handlePlayerDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedPlayerIndex(index);
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', index.toString());
+    }
+  };
+
+  const handlePlayerDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault(); 
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'move';
+    }
+  };
+
+  const handlePlayerDrop = async (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    if (draggedPlayerIndex === null || draggedPlayerIndex === targetIndex) return;
+
+    const newPlayers = [...sortedPlayers];
+    const [draggedPlayer] = newPlayers.splice(draggedPlayerIndex, 1);
+    newPlayers.splice(targetIndex, 0, draggedPlayer);
+
+    setDraggedPlayerIndex(null);
+    
+    try {
+      const updates = newPlayers.map((player, idx) => {
+        const newOrder = idx + 1;
+        if (player.order !== newOrder) {
+          return updatePlayer(player.id, { order: newOrder });
+        }
+        return Promise.resolve();
+      });
+      await Promise.all(updates);
+      onRefresh();
+    } catch (err) {
+      console.error("Error updating order", err);
+    }
   };
 
   const logoAzuupRef = useRef<HTMLInputElement>(null);
@@ -1273,10 +1318,18 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 text-sm">
-                  {players.map((player) => (
-                    <tr key={player.id} className="hover:bg-gray-50/50 transition-colors">
+                  {sortedPlayers.map((player, index) => (
+                    <tr 
+                      key={player.id} 
+                      draggable 
+                      onDragStart={(e) => handlePlayerDragStart(e, index)}
+                      onDragOver={(e) => handlePlayerDragOver(e, index)}
+                      onDrop={(e) => handlePlayerDrop(e, index)}
+                      className={`transition-colors cursor-move ${draggedPlayerIndex === index ? 'opacity-50 bg-gray-100' : 'hover:bg-gray-50/50'}`}
+                    >
                       <td className="py-3">
                         <div className="flex items-center gap-3">
+                          <GripVertical className="w-4 h-4 text-gray-400 shrink-0" />
                           <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-gray-100 bg-gray-50 flex items-center justify-center">
                             {player.imageUrl ? <img src={player.imageUrl} className="w-full h-full object-cover" /> : <span className="text-xs text-emerald-700 font-bold">{player.name.slice(0, 2).toUpperCase()}</span>}
                           </div>
