@@ -146,7 +146,9 @@ export default function App() {
       if (user) {
         if (user.email && ADMIN_EMAILS.includes(user.email)) {
           setAdminUser(user);
-          if (!isSharedLink && !isMuralParam) {
+          const params = new URLSearchParams(window.location.search);
+          const explicitVoting = params.get('view') === 'voting';
+          if (!isSharedLink && !isMuralParam && !explicitVoting) {
             setView('admin');
           }
         } else {

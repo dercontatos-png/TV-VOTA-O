@@ -30,6 +30,367 @@ interface AdminPanelProps {
   onUpdateConfig: (newConfig: SystemConfig) => Promise<void>;
 }
 
+// --- EXPORT NODE COMPONENTS ---
+
+const ExportNodeTV = ({ config, totalVotes, players }: any) => {
+  return (
+    <div 
+      id="export-node-tv" 
+      style={{ 
+        display: 'block', 
+        width: '1920px', 
+        height: '1080px', 
+        backgroundColor: '#020617',
+        backgroundImage: 'linear-gradient(to bottom right, #020617, #001e3b)',
+        position: 'fixed', 
+        top: '-10000px',
+        left: '-10000px',
+        pointerEvents: 'none',
+        zIndex: -9999,
+        padding: '0',
+        boxSizing: 'border-box',
+        fontFamily: 'Inter, sans-serif'
+      }}
+    >
+      <div style={{ position: 'relative', zIndex: 10, width: '100%', height: '100%', padding: '60px 80px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        
+        {/* Top Section */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
+          {/* Left side: Teams */}
+          <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+            {config?.logoAzuup && (
+              <img crossOrigin="anonymous" src={config.logoAzuup} style={{ height: '140px', objectFit: 'contain' }} />
+            )}
+            {config?.logoAzuup && config?.logoCampinense && (
+              <span style={{ fontSize: '48px', fontWeight: 900, color: 'white', opacity: 0.8 }}>X</span>
+            )}
+            {config?.logoCampinense && (
+              <img crossOrigin="anonymous" src={config.logoCampinense} style={{ height: '140px', objectFit: 'contain' }} />
+            )}
+          </div>
+
+          {/* Center: Title */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '-20px' }}>
+            <h1 style={{ fontSize: '64px', fontWeight: 900, color: 'white', textTransform: 'uppercase', margin: 0, letterSpacing: '4px', textShadow: '0 4px 15px rgba(0,0,0,0.5)' }}>
+              RESULTADO DA
+            </h1>
+            <h1 style={{ 
+              fontSize: '120px', 
+              fontWeight: 900, 
+              color: '#ffffff', 
+              textTransform: 'uppercase', 
+              margin: '-20px 0 20px 0', 
+              letterSpacing: '2px', 
+              textShadow: '0 4px 0px #00509e, 0 8px 0px #003366, 0 12px 20px rgba(0,0,0,0.8)' 
+            }}>
+              VOTAÇÃO
+            </h1>
+            <div style={{ background: 'rgba(255, 255, 255, 0.1)', border: '2px solid rgba(255, 255, 255, 0.5)', borderRadius: '16px', padding: '16px 40px', display: 'flex', alignItems: 'center', gap: '24px', backdropFilter: 'blur(10px)', boxShadow: '0 0 20px rgba(255, 255, 255, 0.2)' }}>
+              <span style={{ fontSize: '24px', color: 'white', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '2px' }}>TOTAL DE VOTOS</span>
+              <div style={{ width: '2px', height: '40px', backgroundColor: 'rgba(255, 255, 255, 0.5)' }}></div>
+              <span style={{ fontSize: '48px', fontWeight: 900, color: '#ffffff', fontFamily: 'monospace' }}>{totalVotes.toLocaleString('pt-BR')}</span>
+            </div>
+          </div>
+
+          {/* Right side: Sponsor */}
+          <div style={{ minWidth: '350px' }}>
+            {config?.sponsorName && (
+              <div style={{ background: 'rgba(255, 255, 255, 0.1)', border: '2px solid rgba(255, 255, 255, 0.5)', borderRadius: '24px', padding: '32px 48px', display: 'flex', alignItems: 'center', gap: '32px', backdropFilter: 'blur(10px)', boxShadow: '0 0 20px rgba(255, 255, 255, 0.2)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', width: '100%' }}>
+                  <span style={{ fontSize: '20px', fontWeight: 900, color: '#93c5fd', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '2px' }}>OFERECIMENTO</span>
+                  <span style={{ fontSize: '36px', fontWeight: 900, color: 'white', textTransform: 'uppercase', wordBreak: 'normal', lineHeight: 1.1 }}>{config.sponsorName}</span>
+                  {config.sponsorPrize && (
+                    <span style={{ fontSize: '24px', fontWeight: 700, color: 'white', marginTop: '8px' }}>PRÊMIO: {config.sponsorPrize}</span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom Section: Bars */}
+        <div style={{ display: 'flex', gap: '28px', alignItems: 'flex-end', justifyContent: 'center', height: '580px', paddingBottom: '0' }}>
+          {[...players].sort((a: any, b: any) => b.votesCount - a.votesCount).slice(0, 10).map((player: any, index: number, arr: any[]) => {
+            const topVotes = arr[0]?.votesCount || 1;
+            const heightPercentage = Math.max(15, (player.votesCount / topVotes) * 100);
+            
+            return (
+              <div key={index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '130px', flexShrink: 0, justifyContent: 'flex-end', height: '100%' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '16px' }}>
+                  <span style={{ fontSize: '38px', fontWeight: 900, color: '#ffffff', textShadow: '0 4px 15px rgba(0,0,0,0.8)' }}>
+                    {player.votesCount}
+                  </span>
+                  <span style={{ fontSize: '20px', color: '#93c5fd', fontWeight: 800, textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
+                    {totalVotes > 0 ? ((player.votesCount / totalVotes) * 100).toFixed(1) : 0}%
+                  </span>
+                </div>
+                
+                <div style={{ zIndex: 20, marginBottom: '-55px' }}>
+                  {player.imageUrl ? (
+                    <img crossOrigin="anonymous" src={player.imageUrl} style={{ width: '110px', height: '110px', borderRadius: '50%', objectFit: 'cover', border: '4px solid white', backgroundColor: '#020617', boxShadow: '0 0 20px rgba(255, 255, 255, 0.5)' }} />
+                  ) : (
+                    <div style={{ width: '110px', height: '110px', borderRadius: '50%', backgroundColor: '#020617', border: '4px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '38px', fontWeight: 900, color: 'white', boxShadow: '0 0 20px rgba(255, 255, 255, 0.5)' }}>
+                      {player.name.substring(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ 
+                  width: '100%', 
+                  height: `${(heightPercentage / 100) * 350}px`, 
+                  minHeight: '140px',
+                  background: 'rgba(255, 255, 255, 0.1)', 
+                  borderRadius: '65px 65px 0 0',
+                  border: '3px solid #ffffff',
+                  borderBottom: 'none',
+                  boxShadow: '0 0 20px rgba(255, 255, 255, 0.3), inset 0 0 20px rgba(255, 255, 255, 0.1)',
+                  zIndex: 10,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'flex-end',
+                  paddingBottom: '0'
+                }}>
+                  <div style={{ backgroundColor: 'rgba(0, 30, 59, 0.9)', borderTop: '3px solid #ffffff', width: '100%', padding: '10px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60px' }}>
+                    <div style={{ fontSize: '15px', fontWeight: 900, color: 'white', textTransform: 'uppercase', wordBreak: 'normal', lineHeight: 1.1, textAlign: 'center' }}>
+                      {player.name}
+                    </div>
+                    {player.position && (
+                       <div style={{ fontSize: '11px', fontWeight: 700, color: '#93c5fd', textTransform: 'uppercase', marginTop: '4px', textAlign: 'center' }}>
+                         {player.position}
+                       </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
+const ExportNodeFeed = ({ config, totalVotes, players }: any) => {
+  return (
+    <div 
+      id="export-node-feed" 
+      style={{ 
+        display: 'block', 
+        width: '1080px', 
+        height: '1080px', 
+        backgroundColor: '#020617',
+        backgroundImage: 'linear-gradient(to bottom right, #020617, #001e3b)',
+        position: 'fixed', 
+        top: '-10000px',
+        left: '-10000px',
+        pointerEvents: 'none',
+        zIndex: -9999,
+        padding: '0',
+        boxSizing: 'border-box',
+        fontFamily: 'Inter, sans-serif'
+      }}
+    >
+      <div style={{ position: 'relative', zIndex: 10, width: '100%', height: '100%', padding: '60px 40px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        
+        {/* Top Section */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+          
+          <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginBottom: '20px' }}>
+            {config?.logoAzuup && <img crossOrigin="anonymous" src={config.logoAzuup} style={{ height: '90px', objectFit: 'contain' }} />}
+            {config?.logoAzuup && config?.logoCampinense && <span style={{ fontSize: '32px', fontWeight: 900, color: 'white', opacity: 0.8 }}>X</span>}
+            {config?.logoCampinense && <img crossOrigin="anonymous" src={config.logoCampinense} style={{ height: '90px', objectFit: 'contain' }} />}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <h1 style={{ fontSize: '48px', fontWeight: 900, color: 'white', textTransform: 'uppercase', margin: 0, letterSpacing: '4px', textShadow: '0 4px 15px rgba(0,0,0,0.5)' }}>
+              RESULTADO DA
+            </h1>
+            <h1 style={{ fontSize: '90px', fontWeight: 900, color: '#ffffff', textTransform: 'uppercase', margin: '-10px 0 20px 0', letterSpacing: '2px', textShadow: '0 4px 0px #00509e, 0 8px 0px #003366, 0 12px 20px rgba(0,0,0,0.8)' }}>
+              VOTAÇÃO
+            </h1>
+            <div style={{ background: 'rgba(255, 255, 255, 0.1)', border: '2px solid rgba(255, 255, 255, 0.5)', borderRadius: '16px', padding: '12px 30px', display: 'flex', alignItems: 'center', gap: '20px', backdropFilter: 'blur(10px)', boxShadow: '0 0 20px rgba(255, 255, 255, 0.2)' }}>
+              <span style={{ fontSize: '20px', color: 'white', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '2px' }}>TOTAL DE VOTOS</span>
+              <div style={{ width: '2px', height: '30px', backgroundColor: 'rgba(255, 255, 255, 0.5)' }}></div>
+              <span style={{ fontSize: '40px', fontWeight: 900, color: '#ffffff', fontFamily: 'monospace' }}>{totalVotes.toLocaleString('pt-BR')}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Section: Bars */}
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', justifyContent: 'center', height: '450px', paddingBottom: '0' }}>
+          {[...players].sort((a: any, b: any) => b.votesCount - a.votesCount).slice(0, 10).map((player: any, index: number, arr: any[]) => {
+            const topVotes = arr[0]?.votesCount || 1;
+            const heightPercentage = Math.max(15, (player.votesCount / topVotes) * 100);
+            
+            return (
+              <div key={index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '85px', flexShrink: 0, justifyContent: 'flex-end', height: '100%' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '28px', fontWeight: 900, color: '#ffffff', textShadow: '0 4px 15px rgba(0,0,0,0.8)' }}>
+                    {player.votesCount}
+                  </span>
+                  <span style={{ fontSize: '14px', color: '#93c5fd', fontWeight: 800, textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
+                    {totalVotes > 0 ? ((player.votesCount / totalVotes) * 100).toFixed(1) : 0}%
+                  </span>
+                </div>
+                
+                <div style={{ zIndex: 20, marginBottom: '-35px' }}>
+                  {player.imageUrl ? (
+                    <img crossOrigin="anonymous" src={player.imageUrl} style={{ width: '75px', height: '75px', borderRadius: '50%', objectFit: 'cover', border: '3px solid white', backgroundColor: '#020617', boxShadow: '0 0 15px rgba(255, 255, 255, 0.5)' }} />
+                  ) : (
+                    <div style={{ width: '75px', height: '75px', borderRadius: '50%', backgroundColor: '#020617', border: '3px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', fontWeight: 900, color: 'white', boxShadow: '0 0 15px rgba(255, 255, 255, 0.5)' }}>
+                      {player.name.substring(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ 
+                  width: '100%', 
+                  height: `${(heightPercentage / 100) * 280}px`, 
+                  minHeight: '100px',
+                  background: 'rgba(255, 255, 255, 0.1)', 
+                  borderRadius: '40px 40px 0 0',
+                  border: '2px solid #ffffff',
+                  borderBottom: 'none',
+                  boxShadow: '0 0 15px rgba(255, 255, 255, 0.3), inset 0 0 15px rgba(255, 255, 255, 0.1)',
+                  zIndex: 10,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'flex-end',
+                  paddingBottom: '0'
+                }}>
+                  <div style={{ backgroundColor: 'rgba(0, 30, 59, 0.9)', borderTop: '2px solid #ffffff', width: '100%', padding: '8px 2px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '50px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 900, color: 'white', textTransform: 'uppercase', wordBreak: 'normal', lineHeight: 1.1, textAlign: 'center' }}>
+                      {player.name}
+                    </div>
+                    {player.position && (
+                       <div style={{ fontSize: '9px', fontWeight: 700, color: '#93c5fd', textTransform: 'uppercase', marginTop: '2px', textAlign: 'center' }}>
+                         {player.position}
+                       </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
+const ExportNodeStory = ({ config, totalVotes, players }: any) => {
+  return (
+    <div 
+      id="export-node-story" 
+      style={{ 
+        display: 'block', 
+        width: '1080px', 
+        height: '1920px', 
+        backgroundColor: '#020617',
+        backgroundImage: 'linear-gradient(to bottom right, #020617, #001e3b)',
+        position: 'fixed', 
+        top: '-10000px',
+        left: '-10000px',
+        pointerEvents: 'none',
+        zIndex: -9999,
+        padding: '0',
+        boxSizing: 'border-box',
+        fontFamily: 'Inter, sans-serif'
+      }}
+    >
+      <div style={{ position: 'relative', zIndex: 10, width: '100%', height: '100%', padding: '250px 70px 250px 70px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        
+        {/* Logos */}
+        <div style={{ display: 'flex', gap: '30px', alignItems: 'center', marginBottom: '25px' }}>
+          {config?.logoAzuup && <img crossOrigin="anonymous" src={config.logoAzuup} style={{ height: '100px', objectFit: 'contain' }} />}
+          {config?.logoAzuup && config?.logoCampinense && <span style={{ fontSize: '32px', fontWeight: 900, color: 'white', opacity: 0.8 }}>X</span>}
+          {config?.logoCampinense && <img crossOrigin="anonymous" src={config.logoCampinense} style={{ height: '100px', objectFit: 'contain' }} />}
+        </div>
+
+        {/* Title */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '25px' }}>
+          <h1 style={{ fontSize: '42px', fontWeight: 900, color: 'white', textTransform: 'uppercase', margin: 0, letterSpacing: '4px', textShadow: '0 4px 15px rgba(0,0,0,0.5)' }}>
+            RESULTADO DA
+          </h1>
+          <h1 style={{ fontSize: '80px', fontWeight: 900, color: '#ffffff', textTransform: 'uppercase', margin: '-5px 0 0 0', letterSpacing: '2px', textShadow: '0 4px 0px #00509e, 0 8px 0px #003366, 0 12px 20px rgba(0,0,0,0.8)' }}>
+            VOTAÇÃO
+          </h1>
+        </div>
+
+        <div style={{ background: 'rgba(255, 255, 255, 0.1)', border: '3px solid rgba(255, 255, 255, 0.5)', borderRadius: '24px', padding: '16px 40px', display: 'flex', alignItems: 'center', gap: '20px', backdropFilter: 'blur(10px)', marginBottom: '40px', boxShadow: '0 0 20px rgba(255, 255, 255, 0.2)' }}>
+          <span style={{ fontSize: '20px', color: 'white', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '2px' }}>TOTAL DE VOTOS</span>
+          <div style={{ width: '3px', height: '30px', backgroundColor: 'rgba(255, 255, 255, 0.5)' }}></div>
+          <span style={{ fontSize: '40px', fontWeight: 900, color: '#ffffff', fontFamily: 'monospace' }}>{totalVotes.toLocaleString('pt-BR')}</span>
+        </div>
+
+        {/* Horizontal Bars */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', width: '100%', flexGrow: 1, justifyContent: 'center' }}>
+          {[...players].sort((a: any, b: any) => b.votesCount - a.votesCount).slice(0, 10).map((player: any, index: number, arr: any[]) => {
+            const topVotes = arr[0]?.votesCount || 1;
+            const widthPercentage = Math.max(15, (player.votesCount / topVotes) * 100);
+            
+            return (
+              <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '20px', width: '100%' }}>
+                {/* Avatar */}
+                <div style={{ flexShrink: 0 }}>
+                  {player.imageUrl ? (
+                    <img crossOrigin="anonymous" src={player.imageUrl} style={{ width: '70px', height: '70px', borderRadius: '50%', objectFit: 'cover', border: '3px solid white', backgroundColor: '#020617', boxShadow: '0 0 15px rgba(255, 255, 255, 0.5)' }} />
+                  ) : (
+                    <div style={{ width: '70px', height: '70px', borderRadius: '50%', backgroundColor: '#020617', border: '3px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '30px', fontWeight: 900, color: 'white', boxShadow: '0 0 15px rgba(255, 255, 255, 0.5)' }}>
+                      {player.name.substring(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+
+                {/* Name & Bar Container */}
+                <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingRight: '5px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                      <span style={{ fontSize: '20px', fontWeight: 900, color: 'white', textTransform: 'uppercase', lineHeight: 1, wordBreak: 'normal' }}>{player.name}</span>
+                      {player.position && (
+                         <span style={{ fontSize: '13px', fontWeight: 700, color: '#93c5fd', textTransform: 'uppercase', marginTop: '2px' }}>{player.position}</span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'baseline' }}>
+                      <span style={{ fontSize: '22px', fontWeight: 900, color: '#ffffff', lineHeight: 1 }}>{player.votesCount}</span>
+                      <span style={{ fontSize: '14px', fontWeight: 700, color: '#93c5fd' }}>({totalVotes > 0 ? ((player.votesCount / totalVotes) * 100).toFixed(1) : 0}%)</span>
+                    </div>
+                  </div>
+                  
+                  {/* Bar */}
+                  <div style={{ width: '100%', height: '20px', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <div style={{ 
+                      width: `${widthPercentage}%`, 
+                      height: '100%', 
+                      background: 'linear-gradient(90deg, #00509e, #ffffff)',
+                      borderRadius: '10px',
+                      boxShadow: '0 0 15px rgba(255, 255, 255, 0.5)'
+                    }}></div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        
+        {/* Sponsor Bottom */}
+        {config?.sponsorName && (
+          <div style={{ marginTop: '30px', background: 'rgba(255, 255, 255, 0.1)', border: '2px solid rgba(255, 255, 255, 0.5)', borderRadius: '24px', padding: '20px 40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', backdropFilter: 'blur(10px)', width: '100%', boxShadow: '0 0 20px rgba(255, 255, 255, 0.2)' }}>
+            <span style={{ fontSize: '16px', fontWeight: 900, color: '#93c5fd', textTransform: 'uppercase', letterSpacing: '2px' }}>OFERECIMENTO</span>
+            <span style={{ fontSize: '32px', fontWeight: 900, color: 'white', textTransform: 'uppercase', wordBreak: 'normal', textAlign: 'center' }}>{config.sponsorName}</span>
+            {config.sponsorPrize && (
+              <span style={{ fontSize: '18px', fontWeight: 700, color: 'white', marginTop: '2px' }}>PRÊMIO: {config.sponsorPrize}</span>
+            )}
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+};
+
 export default function AdminPanel({ players, onRefresh, config, onUpdateConfig }: AdminPanelProps) {
   // Player Form states
   const [isEditing, setIsEditing] = useState(false);
@@ -43,6 +404,7 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
   const [order, setOrder] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [exportingFormat, setExportingFormat] = useState<string | null>(null);
   const [operationMsg, setOperationMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // File Upload states
@@ -491,6 +853,16 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
   // 2. Render Full Admin Panel View
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 animate-fade-in" id="admin-panel-dashboard">
+      <div className="flex justify-end mb-6 print:hidden">
+        <button 
+          onClick={() => window.open(window.location.origin + '?view=voting', '_blank')}
+          className="bg-slate-900 hover:bg-slate-800 text-white font-bold py-2 px-6 rounded-xl flex items-center gap-2 shadow-sm transition-colors text-sm"
+        >
+          <span>Ver Preview da Votação</span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+        </button>
+      </div>
+
       {/* 
         =========================================================
         PERSONALIZED PDF PRINT REPORT VIEW (VISIBLE ONLY WHEN PRINTING)
@@ -730,51 +1102,140 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
             </div>
             
             <div className="pt-4 border-t border-slate-800 mt-2">
-              <label className="block text-[10px] font-black uppercase tracking-wider text-amber-400 mb-1.5 flex items-center gap-1.5">
-                <ImageIcon className="w-3.5 h-3.5" /> Exportar Ranking 16:9
+              <label className="block text-[10px] font-black uppercase tracking-wider text-amber-400 mb-2 flex items-center gap-1.5">
+                <ImageIcon className="w-3.5 h-3.5" /> Gerador de Imagens (Alta Qualidade)
               </label>
-              <div className="flex gap-2">
+              
+              <div className="grid grid-cols-1 gap-2">
+                {/* TV/OBS Format */}
                 <button
                   type="button"
-                  disabled={isExporting}
+                  disabled={exportingFormat !== null}
                   onClick={async () => {
-                    const node = document.getElementById('export-mural-node');
-                    if (node) {
-                      setIsExporting(true);
-
-                      try {
-                        // Allow a small delay for images to fully load if any changed recently
-                        await new Promise(r => setTimeout(r, 1000));
-                        const dataUrl = await htmlToImage.toJpeg(node, { pixelRatio: 1, width: 1920, height: 1080, quality: 0.95 });
+                    setExportingFormat('tv');
+                    try {
+                      await new Promise(r => setTimeout(r, 1000));
+                      const node = document.getElementById('export-node-tv');
+                      if (node) {
+                        const originalTop = node.style.top;
+                        const originalLeft = node.style.left;
+                        
+                        node.style.top = '0px';
+                        node.style.left = '0px';
+                        
+                        const dataUrl = await htmlToImage.toJpeg(node, { pixelRatio: 2, width: 1920, height: 1080, quality: 1.0 });
+                        
+                        node.style.top = originalTop;
+                        node.style.left = originalLeft;
+                        
                         const link = document.createElement('a');
-                        link.download = 'ranking-craque.jpg';
+                        link.download = 'ranking-tv-16x9.jpg';
                         link.href = dataUrl;
                         link.click();
-                      } catch (err) {
-                        console.error('Failed to export image', err);
-                        alert('Erro ao exportar a imagem. Tente novamente.');
-                      } finally {
-                        setIsExporting(false);
                       }
+                    } catch (err) {
+                      console.error('Failed to export TV image', err);
+                      alert('Erro ao exportar a imagem. Tente novamente.');
+                    } finally {
+                      setExportingFormat(null);
                     }
                   }}
-                  className={`text-white px-4 py-2.5 rounded-xl transition-colors cursor-pointer shadow-sm text-xs font-bold w-full flex items-center justify-center gap-2 ${isExporting ? 'bg-slate-600 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500'}`}
+                  className={`text-white px-3 py-2.5 rounded-xl transition-colors cursor-pointer shadow-sm text-[11px] font-bold w-full flex items-center justify-center gap-2 ${exportingFormat === 'tv' ? 'bg-amber-600 cursor-not-allowed' : 'bg-slate-800 hover:bg-slate-700'}`}
                 >
-                  {isExporting ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      Gerando PNG... Aguarde
-                    </>
+                  {exportingFormat === 'tv' ? (
+                    <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Gerando TV (16:9)...</>
                   ) : (
-                    <>
-                      <Download className="w-4 h-4" />
-                      Baixar Imagem em Alta Qualidade (PNG 16:9)
-                    </>
+                    <><Monitor className="w-3.5 h-3.5" /> Baixar TV / OBS (1920x1080)</>
+                  )}
+                </button>
+
+                {/* Feed Format */}
+                <button
+                  type="button"
+                  disabled={exportingFormat !== null}
+                  onClick={async () => {
+                    setExportingFormat('feed');
+                    try {
+                      await new Promise(r => setTimeout(r, 1000));
+                      const node = document.getElementById('export-node-feed');
+                      if (node) {
+                        const originalTop = node.style.top;
+                        const originalLeft = node.style.left;
+                        
+                        node.style.top = '0px';
+                        node.style.left = '0px';
+                        
+                        const dataUrl = await htmlToImage.toJpeg(node, { pixelRatio: 2, width: 1080, height: 1080, quality: 1.0 });
+                        
+                        node.style.top = originalTop;
+                        node.style.left = originalLeft;
+                        
+                        const link = document.createElement('a');
+                        link.download = 'ranking-feed-1x1.jpg';
+                        link.href = dataUrl;
+                        link.click();
+                      }
+                    } catch (err) {
+                      console.error('Failed to export Feed image', err);
+                      alert('Erro ao exportar a imagem. Tente novamente.');
+                    } finally {
+                      setExportingFormat(null);
+                    }
+                  }}
+                  className={`text-white px-3 py-2.5 rounded-xl transition-colors cursor-pointer shadow-sm text-[11px] font-bold w-full flex items-center justify-center gap-2 ${exportingFormat === 'feed' ? 'bg-indigo-600 cursor-not-allowed' : 'bg-slate-800 hover:bg-slate-700'}`}
+                >
+                  {exportingFormat === 'feed' ? (
+                    <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Gerando Feed (1:1)...</>
+                  ) : (
+                    <><ImageIcon className="w-3.5 h-3.5" /> Baixar Instagram Feed (1080x1080)</>
+                  )}
+                </button>
+
+                {/* Story Format */}
+                <button
+                  type="button"
+                  disabled={exportingFormat !== null}
+                  onClick={async () => {
+                    setExportingFormat('story');
+                    try {
+                      await new Promise(r => setTimeout(r, 1000));
+                      const node = document.getElementById('export-node-story');
+                      if (node) {
+                        const originalTop = node.style.top;
+                        const originalLeft = node.style.left;
+                        
+                        node.style.top = '0px';
+                        node.style.left = '0px';
+                        
+                        const dataUrl = await htmlToImage.toJpeg(node, { pixelRatio: 2, width: 1080, height: 1920, quality: 1.0 });
+                        
+                        node.style.top = originalTop;
+                        node.style.left = originalLeft;
+                        
+                        const link = document.createElement('a');
+                        link.download = 'ranking-story-9x16.jpg';
+                        link.href = dataUrl;
+                        link.click();
+                      }
+                    } catch (err) {
+                      console.error('Failed to export Story image', err);
+                      alert('Erro ao exportar a imagem. Tente novamente.');
+                    } finally {
+                      setExportingFormat(null);
+                    }
+                  }}
+                  className={`text-white px-3 py-2.5 rounded-xl transition-colors cursor-pointer shadow-sm text-[11px] font-bold w-full flex items-center justify-center gap-2 ${exportingFormat === 'story' ? 'bg-pink-600 cursor-not-allowed' : 'bg-slate-800 hover:bg-slate-700'}`}
+                >
+                  {exportingFormat === 'story' ? (
+                    <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Gerando Story (9:16)...</>
+                  ) : (
+                    <><ImageIcon className="w-3.5 h-3.5" /> Baixar Story / Reels (1080x1920)</>
                   )}
                 </button>
               </div>
+
               <p className="text-[10px] text-slate-400 text-left mt-2 leading-relaxed">
-                Gere uma imagem (JPEG) do ranking atual, tamanho 1920x1080, para usar como mídia no vMix ou OBS.
+                Gere imagens prontas para suas redes sociais. Os layouts se ajustam automaticamente ao formato escolhido.
               </p>
             </div>
           </div>
@@ -1466,142 +1927,10 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
         </div>
       </div>
 
-      {/* Hidden Export Node for high-quality 16:9 Image */}
-      <div 
-        id="export-mural-node" 
-        style={{ 
-          display: 'block', 
-          width: '1920px', 
-          height: '1080px', 
-          backgroundColor: '#0f172a', /* slate-900 */
-          backgroundImage: 'linear-gradient(to bottom right, #0f172a, #1e293b)',
-          position: 'fixed', 
-          top: '-10000px',
-          left: '-10000px',
-          pointerEvents: 'none',
-          zIndex: -9999,
-          padding: '0',
-          boxSizing: 'border-box',
-          fontFamily: 'Inter, sans-serif'
-        }}
-      >
-        {/* Content Wrapper */}
-        <div style={{ position: 'relative', zIndex: 10, width: '100%', height: '100%', padding: '60px 80px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          
-          {/* Top Section */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
-            {/* Left side: Teams */}
-            <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
-              {config?.logoAzuup && (
-                <img crossOrigin="anonymous" src={config.logoAzuup} style={{ height: '140px', objectFit: 'contain' }} />
-              )}
-              {config?.logoAzuup && config?.logoCampinense && (
-                <span style={{ fontSize: '48px', fontWeight: 900, color: 'white', opacity: 0.8 }}>X</span>
-              )}
-              {config?.logoCampinense && (
-                <img crossOrigin="anonymous" src={config.logoCampinense} style={{ height: '140px', objectFit: 'contain' }} />
-              )}
-            </div>
-
-            {/* Center: Title */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '-20px' }}>
-              <h1 style={{ fontSize: '64px', fontWeight: 900, color: 'white', textTransform: 'uppercase', margin: 0, letterSpacing: '4px', textShadow: '0 4px 15px rgba(0,0,0,0.5)' }}>
-                RESULTADO DA
-              </h1>
-              <h1 style={{ 
-                fontSize: '120px', 
-                fontWeight: 900, 
-                color: '#fbbf24', 
-                textTransform: 'uppercase', 
-                margin: '-20px 0 20px 0', 
-                letterSpacing: '2px', 
-                textShadow: '0 4px 0px #b45309, 0 8px 0px #78350f, 0 12px 20px rgba(0,0,0,0.8)' 
-              }}>
-                VOTAÇÃO
-              </h1>
-              <div style={{ background: 'rgba(2, 6, 23, 0.7)', border: '2px solid rgba(251, 191, 36, 0.5)', borderRadius: '16px', padding: '16px 40px', display: 'flex', alignItems: 'center', gap: '24px', backdropFilter: 'blur(10px)', boxShadow: '0 0 20px rgba(245, 158, 11, 0.3)' }}>
-                <span style={{ fontSize: '24px', color: 'white', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '2px' }}>TOTAL DE VOTOS</span>
-                <div style={{ width: '2px', height: '40px', backgroundColor: 'rgba(251, 191, 36, 0.5)' }}></div>
-                <span style={{ fontSize: '48px', fontWeight: 900, color: '#fbbf24', fontFamily: 'monospace' }}>{totalVotes.toLocaleString('pt-BR')}</span>
-              </div>
-            </div>
-
-            {/* Right side: Sponsor */}
-            <div style={{ minWidth: '350px' }}>
-              {config?.sponsorName && (
-                <div style={{ background: 'rgba(2, 6, 23, 0.7)', border: '2px solid rgba(251, 191, 36, 0.5)', borderRadius: '24px', padding: '32px 48px', display: 'flex', alignItems: 'center', gap: '32px', backdropFilter: 'blur(10px)', boxShadow: '0 0 20px rgba(245, 158, 11, 0.3)' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', width: '100%' }}>
-                    <span style={{ fontSize: '20px', fontWeight: 900, color: '#fbbf24', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '2px' }}>OFERECIMENTO</span>
-                    <span style={{ fontSize: '42px', fontWeight: 900, color: 'white', textTransform: 'uppercase' }}>{config.sponsorName}</span>
-                    {config.sponsorPrize && (
-                      <span style={{ fontSize: '28px', fontWeight: 700, color: 'white', marginTop: '8px' }}>PRÊMIO: {config.sponsorPrize}</span>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Bottom Section: Bars */}
-          <div style={{ display: 'flex', gap: '48px', alignItems: 'flex-end', justifyContent: 'center', height: '580px', paddingBottom: '0' }}>
-            {[...players].sort((a, b) => b.votesCount - a.votesCount).slice(0, 7).map((player, index, arr) => {
-              const topVotes = arr[0]?.votesCount || 1;
-              const heightPercentage = Math.max(15, (player.votesCount / topVotes) * 100);
-              
-              return (
-                <div key={index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '160px', flexShrink: 0, justifyContent: 'flex-end', height: '100%' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '16px' }}>
-                    <span style={{ fontSize: '48px', fontWeight: 900, color: '#fbbf24', textShadow: '0 4px 15px rgba(0,0,0,0.8)' }}>
-                      {player.votesCount}
-                    </span>
-                    <span style={{ fontSize: '24px', color: '#fcd34d', fontWeight: 800, textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
-                      {totalVotes > 0 ? ((player.votesCount / totalVotes) * 100).toFixed(1) : 0}%
-                    </span>
-                  </div>
-                  
-                  <div style={{ zIndex: 20, marginBottom: '-70px' }}>
-                    {player.imageUrl ? (
-                      <img crossOrigin="anonymous" src={player.imageUrl} style={{ width: '140px', height: '140px', borderRadius: '50%', objectFit: 'cover', border: '4px solid white', backgroundColor: '#0f172a', boxShadow: '0 0 20px rgba(251, 191, 36, 0.8)' }} />
-                    ) : (
-                      <div style={{ width: '140px', height: '140px', borderRadius: '50%', backgroundColor: '#0f172a', border: '4px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px', fontWeight: 900, color: 'white', boxShadow: '0 0 20px rgba(251, 191, 36, 0.8)' }}>
-                        {player.name.substring(0, 2).toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-
-                  <div style={{ 
-                    width: '100%', 
-                    height: `${(heightPercentage / 100) * 350}px`, 
-                    minHeight: '120px',
-                    background: 'rgba(0, 0, 0, 0.7)', 
-                    borderRadius: '80px 80px 0 0',
-                    border: '3px solid #fbbf24',
-                    borderBottom: 'none',
-                    boxShadow: '0 0 20px rgba(251, 191, 36, 0.5), inset 0 0 20px rgba(251, 191, 36, 0.2)',
-                    zIndex: 10,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'flex-end',
-                    paddingBottom: '0'
-                  }}>
-                    <div style={{ backgroundColor: 'black', borderTop: '3px solid #fbbf24', width: '100%', padding: '12px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60px' }}>
-                      <div style={{ fontSize: '20px', fontWeight: 900, color: 'white', textTransform: 'uppercase', wordBreak: 'break-word', lineHeight: 1.1, textAlign: 'center' }}>
-                        {player.name}
-                      </div>
-                      {player.position && (
-                         <div style={{ fontSize: '14px', fontWeight: 700, color: '#fbbf24', textTransform: 'uppercase', marginTop: '4px', textAlign: 'center' }}>
-                           {player.position}
-                         </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-        </div>
-      </div>
+      {/* Hidden Export Nodes for high-quality Images */}
+      <ExportNodeTV config={config} totalVotes={totalVotes} players={players} />
+      <ExportNodeFeed config={config} totalVotes={totalVotes} players={players} />
+      <ExportNodeStory config={config} totalVotes={totalVotes} players={players} />
     </div>
   );
 }

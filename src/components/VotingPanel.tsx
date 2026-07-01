@@ -248,10 +248,10 @@ export default function VotingPanel({
 
       {/* Sponsor Banner */}
       {config?.sponsorName && (
-        <div className="mb-8 bg-gradient-to-r from-amber-500/10 via-amber-100 to-amber-50 border border-amber-200 rounded-3xl p-6 md:p-8 shadow-sm flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
+        <div className="mb-8 bg-gradient-to-r from-amber-500/10 via-amber-100 to-amber-50 border border-amber-200 rounded-3xl p-6 md:p-8 shadow-sm flex flex-col sm:flex-row items-center gap-6 md:gap-10 text-center sm:text-left">
           {config.sponsorLogoUrl ? (
-            <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl bg-white border border-amber-200 p-2 shrink-0 flex items-center justify-center shadow-sm overflow-hidden">
-              <img src={config.sponsorLogoUrl} alt={config.sponsorName} className="max-w-full max-h-full object-contain" />
+            <div className="w-32 h-32 sm:w-48 sm:h-48 shrink-0 flex items-center justify-center">
+              <img src={config.sponsorLogoUrl} alt={config.sponsorName} className="max-w-full max-h-full object-contain drop-shadow-md" />
             </div>
           ) : (
             <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl bg-amber-100 border border-amber-200 shrink-0 flex items-center justify-center shadow-sm">
@@ -260,15 +260,15 @@ export default function VotingPanel({
           )}
           
           <div>
-            <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 bg-amber-200/50 px-2.5 py-1 rounded-full">
+            <span className="text-xs font-black uppercase tracking-widest text-amber-600 bg-amber-200/50 px-3 py-1.5 rounded-full border border-amber-300/30 shadow-sm">
               Oferecimento Especial
             </span>
-            <h3 className="text-xl sm:text-2xl font-black text-slate-800 mt-2">
+            <h3 className="text-2xl sm:text-4xl font-black text-slate-800 mt-4 leading-tight">
               {config.sponsorName}
             </h3>
             {config.sponsorPrize && (
-              <p className="text-sm sm:text-base text-slate-600 mt-1 font-medium">
-                Prêmio de <strong className="text-amber-600">{config.sponsorPrize}</strong> para o jogador mais votado!
+              <p className="text-base sm:text-lg text-slate-700 mt-2 font-medium">
+                Prêmio de <strong className="text-amber-600 font-black">{config.sponsorPrize}</strong> para o jogador mais votado!
               </p>
             )}
           </div>

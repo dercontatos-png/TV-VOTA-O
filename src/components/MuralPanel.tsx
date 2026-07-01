@@ -201,7 +201,7 @@ export function MuralPanel({ staticPlayers, staticConfig }: MuralPanelProps = {}
                   paddingBottom: '0'
                 }}>
                   <div style={{ backgroundColor: 'black', borderTop: 'clamp(2px, 0.2vw, 3px) solid #fbbf24', width: '100%', padding: 'clamp(8px, 1vw, 12px) 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 'clamp(40px, 5vh, 60px)' }}>
-                    <div style={{ fontSize: 'clamp(12px, 1.2vw, 20px)', fontWeight: 900, color: 'white', textTransform: 'uppercase', wordBreak: 'break-word', lineHeight: 1.1, textAlign: 'center' }}>
+                    <div style={{ fontSize: 'clamp(12px, 1.2vw, 20px)', fontWeight: 900, color: 'white', textTransform: 'uppercase', wordBreak: 'normal', lineHeight: 1.1, textAlign: 'center' }}>
                       {player.name}
                     </div>
                     {player.position && (
