@@ -24,8 +24,10 @@ export default function PlayerCard({
 }: PlayerCardProps) {
   const [copied, setCopied] = useState(false);
   const [isZoomed, setIsZoomed] = useState(false);
+  const [fitMode, setFitMode] = useState<'cover' | 'contain'>('cover');
 
-  const handleShare = () => {
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
     const shareUrl = `${window.location.origin}${window.location.pathname}?player=${player.id}`;
     navigator.clipboard.writeText(shareUrl).then(() => {
       setCopied(true);
@@ -101,7 +103,7 @@ export default function PlayerCard({
         }`}
       >
         {/* Large Rectangular Image Header - Max visibility as requested, NO OVERLAYS */}
-        <div className="relative h-72 w-full bg-slate-100 overflow-hidden">
+        <div className="relative h-72 w-full bg-slate-100 overflow-hidden group">
           <button
             onClick={() => setIsZoomed(true)}
             className="absolute inset-0 w-full h-full cursor-zoom-in flex items-center justify-center overflow-hidden bg-slate-200"
@@ -112,7 +114,7 @@ export default function PlayerCard({
                 src={player.imageUrl}
                 alt={player.name}
                 referrerPolicy="no-referrer"
-                className="w-full h-full object-contain bg-slate-200 transition-transform duration-500 group-hover:scale-105"
+                className={`w-full h-full bg-slate-200 transition-transform duration-500 group-hover:scale-105 ${fitMode === 'cover' ? 'object-cover object-top' : 'object-contain'}`}
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.display = 'none';
                 }}
@@ -128,6 +130,19 @@ export default function PlayerCard({
               <Search className="w-4 h-4 text-white" />
             </div>
           </button>
+          
+          {player.imageUrl && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setFitMode(fitMode === 'cover' ? 'contain' : 'cover');
+              }}
+              className="absolute top-3 left-3 bg-black/60 hover:bg-black/80 text-white text-[10px] font-bold px-2 py-1 rounded-md backdrop-blur-md transition-colors z-10 uppercase tracking-widest border border-white/20"
+              title="Ajustar modo de visualização da foto"
+            >
+              Ajustar Foto
+            </button>
+          )}
         </div>
 
         {/* Main content body */}

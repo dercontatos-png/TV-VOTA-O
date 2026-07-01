@@ -577,14 +577,6 @@ export default function AdminPanel({ players, onRefresh, config, onUpdateConfig 
               Gere o link oficial de votação para compartilhar com os eleitores no WhatsApp e redes sociais. 
               <strong> Quando as pessoas acessarem, precisarão se identificar com o Google logo de cara</strong> para garantir a validade e a segurança de cada voto (máximo de 1 voto por pessoa).
             </p>
-            
-            <div className="mt-4 bg-slate-950/40 border border-slate-800 p-3 rounded-2xl text-[11px] text-slate-300 leading-relaxed flex items-start gap-2 max-w-lg">
-              <Info className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-              <div>
-                <strong className="text-white block mb-0.5">Como definir novas contas de administrador?</strong>
-                Os e-mails autorizados estão definidos na variável <code className="bg-slate-900 px-1 py-0.5 rounded font-mono text-emerald-300">ADMIN_EMAILS</code> dentro de <code className="text-slate-400">src/App.tsx</code>. Atualmente, apenas o e-mail <strong>der.contatos@gmail.com</strong> tem privilégios totais de organizador.
-              </div>
-            </div>
           </div>
 
           <div className="bg-slate-950/50 p-6 rounded-3xl border border-slate-800 w-full lg:max-w-md shrink-0 flex flex-col gap-4">

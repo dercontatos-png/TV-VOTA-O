@@ -152,7 +152,8 @@ export default function App() {
           const vInfo: VoterInfo = {
             id: user.uid,
             name: user.displayName || 'Eleitor',
-            email: user.email || ''
+            email: user.email || '',
+            photoURL: user.photoURL || undefined
           };
           setVoterInfo(vInfo);
           localStorage.setItem('craque_voter_info', JSON.stringify(vInfo));
@@ -495,7 +496,7 @@ export default function App() {
                 </div>
               </div>
             ) : (
-              <div className="bg-gradient-to-r from-slate-900 to-slate-850 p-6 md:p-8 text-white relative">
+              <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-6 md:p-8 text-white relative">
                 <div className="absolute top-4 right-4 w-12 h-12 bg-white/5 rounded-full blur-lg"></div>
                 <span className="bg-emerald-500 text-slate-950 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md">
                   Votação Oficial
@@ -509,43 +510,43 @@ export default function App() {
               </div>
             )}
 
-            <div className="p-6 md:p-8">
+            <div className="p-8 md:p-10 bg-white">
               {/* Informative text below banner/header */}
               {hasBanner && (
-                <div className="mb-6 bg-slate-50 border border-slate-100 rounded-2xl p-4">
-                  <p className="text-slate-600 text-xs md:text-sm font-semibold text-center leading-relaxed">
-                    Escolha seu favorito entre as equipes finalistas do Campeonato Municipal de <strong className="text-slate-900">Morro do Chapéu - BA 2026</strong>!
+                <div className="mb-6 bg-emerald-50 border border-emerald-100/50 rounded-2xl p-4 shadow-sm">
+                  <p className="text-emerald-900 text-xs md:text-sm font-semibold text-center leading-relaxed">
+                    Escolha seu favorito entre as equipes finalistas do Campeonato Municipal de <strong className="font-black">Morro do Chapéu - BA 2026</strong>!
                   </p>
                 </div>
               )}
 
-              <div className="text-center mb-6">
-                <h3 className="text-lg font-black text-slate-900 mb-1.5 font-display">Identifique-se para votar</h3>
-                <p className="text-slate-500 text-xs leading-relaxed max-w-xs mx-auto">
-                  Para garantir a segurança, validade e controle anti-fraudes dos votos, o login com o Google é obrigatório.
+              <div className="text-center mb-8">
+                <h3 className="text-xl font-black text-slate-900 mb-2 font-display">Identifique-se para votar</h3>
+                <p className="text-slate-600 text-sm leading-relaxed max-w-[280px] mx-auto font-medium">
+                  Para garantir a validade e o controle de 1 voto por pessoa, o login é obrigatório.
                 </p>
               </div>
 
               {/* Login Google Auth Form */}
               <div className="space-y-4">
                 {authError && (
-                  <div className="p-3 bg-rose-50 border border-rose-200 text-rose-600 text-xs font-bold rounded-xl text-center leading-relaxed animate-fade-in">
+                  <div className="p-4 bg-rose-50 border-l-4 border-rose-500 text-rose-700 text-sm font-bold rounded-r-xl leading-relaxed animate-fade-in shadow-sm">
                     {authError}
                   </div>
                 )}
                 
                 <button
                   onClick={handleGoogleLogin}
-                  className="w-full bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-black py-4 px-4 rounded-xl shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 cursor-pointer text-xs tracking-widest mt-4 text-center flex items-center justify-center gap-3"
+                  className="w-full bg-white hover:bg-slate-50 text-slate-700 border-2 border-slate-200 font-black py-4 px-4 rounded-2xl shadow-sm transition-all hover:shadow-md hover:border-emerald-500/30 hover:-translate-y-0.5 cursor-pointer text-xs md:text-sm tracking-widest mt-2 text-center flex items-center justify-center gap-3"
                 >
-                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-6 h-6" />
                   ENTRAR COM O GOOGLE
                 </button>
               </div>
               
-              <div className="mt-8 flex items-center gap-2 text-[11px] font-black text-slate-400 justify-center w-full pt-5 border-t border-slate-100">
-                <UserCheck className="w-4 h-4 text-emerald-500 shrink-0" />
-                <span>Apenas 1 voto por pessoa por dia</span>
+              <div className="mt-10 flex items-center gap-2 text-[11px] md:text-xs font-black text-slate-400 justify-center w-full pt-6 border-t border-slate-100">
+                <UserCheck className="w-5 h-5 text-emerald-500 shrink-0" />
+                <span className="uppercase tracking-wider">Apenas 1 voto por pessoa por dia</span>
               </div>
             </div>
           </div>

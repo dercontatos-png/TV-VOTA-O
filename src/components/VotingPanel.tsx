@@ -76,12 +76,26 @@ export default function VotingPanel({
   const teams = ['Todos', ...Array.from(new Set(players.map(p => p.team))).filter(Boolean)];
 
   // 3. Filter players based on search query and team selection
-  const filteredPlayers = players.filter(player => {
-    const matchesSearch = player.name.toLowerCase().includes(search.toLowerCase()) || 
-                          player.team.toLowerCase().includes(search.toLowerCase());
-    const matchesTeam = selectedTeam === 'Todos' || player.team === selectedTeam;
-    return matchesSearch && matchesTeam;
-  });
+  const filteredPlayers = React.useMemo(() => {
+    let result = players.filter(player => {
+      const matchesSearch = player.name.toLowerCase().includes(search.toLowerCase()) || 
+                            player.team.toLowerCase().includes(search.toLowerCase());
+      const matchesTeam = selectedTeam === 'Todos' || player.team === selectedTeam;
+      return matchesSearch && matchesTeam;
+    });
+
+    // Shuffle the array to be impartial, using a pseudo-random stable hash based on ID
+    result = [...result].sort((a, b) => {
+      const hash = (str: string) => {
+        let h = 0;
+        for (let i = 0; i < str.length; i++) h = Math.imul(31, h) + str.charCodeAt(i) | 0;
+        return h;
+      };
+      return hash(a.id) - hash(b.id);
+    });
+
+    return result;
+  }, [players, search, selectedTeam]);
 
   const totalVotes = players.reduce((sum, p) => sum + p.votesCount, 0);
 
@@ -128,13 +142,6 @@ export default function VotingPanel({
         <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:24px_24px]"></div>
         <div className="absolute -top-32 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl pointer-events-none"></div>
         
-        {/* Sponsor/Main Logo Space */}
-        {config?.logoPrincipal && (
-          <div className="relative z-10 mb-8 max-w-[200px] md:max-w-[250px] bg-white/10 backdrop-blur-sm border border-white/20 p-4 rounded-2xl flex items-center justify-center shadow-lg">
-            <img src={config.logoPrincipal} alt="Logo Principal" className="w-full h-auto object-contain max-h-[80px]" />
-          </div>
-        )}
-
         {/* Team Logos Matchup */}
         <div className="relative z-10 flex items-center justify-center gap-6 md:gap-14 mb-8" id="team-matchup-logos">
           {/* Team 1: AZUUP */}
@@ -225,9 +232,13 @@ export default function VotingPanel({
         {voterInfo ? (
           <div className="p-5 bg-gradient-to-r from-blue-500/10 via-blue-500/5 to-white border border-blue-500/20 rounded-3xl flex flex-col md:flex-row items-start md:items-center justify-between gap-5 shadow-xs animate-fade-in">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600 shrink-0">
-                <UserCheck className="w-6 h-6 stroke-[2.5]" />
-              </div>
+              {voterInfo.photoURL ? (
+                <img src={voterInfo.photoURL} alt="User Profile" referrerPolicy="no-referrer" className="w-12 h-12 rounded-2xl border-2 border-blue-500/20 shadow-sm shrink-0 object-cover" />
+              ) : (
+                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600 shrink-0">
+                  <UserCheck className="w-6 h-6 stroke-[2.5]" />
+                </div>
+              )}
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-black text-blue-800 bg-blue-100 px-2.5 py-0.5 rounded-full uppercase tracking-wider">

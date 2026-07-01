@@ -13,6 +13,7 @@ export interface VoterInfo {
   email: string;
   name: string;
   phone?: string;
+  photoURL?: string;
 }
 
 export interface Vote {
